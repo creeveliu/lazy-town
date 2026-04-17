@@ -1,9 +1,13 @@
-import { getGamesFromDb, getLatestSyncInfo } from "@/lib/db";
+import { getGamesFromDb, getLatestSyncInfo, getMoviesFromDb } from "@/lib/db";
 import type { GameItem } from "@/lib/game-source";
+import type { MovieItem } from "@/lib/movie-source";
 
 export const dynamic = "force-dynamic";
 
-function proxiedImageUrl(url: string): string {
+function proxiedImageUrl(url: string, referer?: string): string {
+  if (referer) {
+    return `/api/image?url=${encodeURIComponent(url)}&ref=${encodeURIComponent(referer)}`;
+  }
   return `/api/image?url=${encodeURIComponent(url)}`;
 }
 
@@ -13,13 +17,20 @@ function heatTag(heat: number): { label: string; level: "low" | "mid" | "high" }
   return { label: "普通", level: "low" };
 }
 
+function movieWishTag(wish: number): { label: string; level: "low" | "mid" | "high" } {
+  if (wish >= 50000) return { label: "爆款", level: "high" };
+  if (wish >= 10000) return { label: "热门", level: "mid" };
+  return { label: "普通", level: "low" };
+}
+
 export default async function Home() {
   let games: GameItem[] = [];
+  let movies: MovieItem[] = [];
   let syncInfo: { status: string; createdAt: string } | null = null;
   let dbError = "";
 
   try {
-    [games, syncInfo] = await Promise.all([getGamesFromDb(), getLatestSyncInfo()]);
+    [games, movies, syncInfo] = await Promise.all([getGamesFromDb(), getMoviesFromDb(), getLatestSyncInfo()]);
   } catch (error) {
     dbError = error instanceof Error ? error.message : "database error";
   }
@@ -81,6 +92,67 @@ export default async function Home() {
                   </td>
                 </tr>
               )})
+            )}
+          </tbody>
+        </table>
+      </section>
+
+      <header className="header section-gap">
+        <h1>电影放映表</h1>
+      </header>
+
+      <section className="table-wrap">
+        <table className="game-table">
+          <thead>
+            <tr>
+              <th>海报</th>
+              <th>上映日</th>
+              <th>电影名</th>
+              <th>类型 / 地区</th>
+              <th>热度</th>
+            </tr>
+          </thead>
+          <tbody>
+            {movies.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="empty">
+                  {dbError
+                    ? `数据库不可用：${dbError}`
+                    : `暂无电影数据，请先访问 /api/sync 触发同步${syncInfo ? `（最近同步：${syncInfo.status}，${syncInfo.createdAt}）` : ""}`}
+                </td>
+              </tr>
+            ) : (
+              movies.map((movie) => {
+                const tag = movieWishTag(movie.wish);
+                return (
+                  <tr key={movie.url}>
+                    <td>
+                      {movie.coverUrl ? (
+                        <img
+                          className="cover"
+                          src={proxiedImageUrl(movie.coverUrl, movie.url)}
+                          alt={movie.title}
+                          width={54}
+                          height={76}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="cover cover-placeholder">无图</div>
+                      )}
+                    </td>
+                    <td className="mono">{movie.releaseDate}</td>
+                    <td className="title-cell">
+                      <a href={movie.url} target="_blank" rel="noreferrer" className="title-link">
+                        {movie.title}
+                      </a>
+                    </td>
+                    <td>{`${movie.genres || "-"} / ${movie.country || "-"}`}</td>
+                    <td>
+                      <span className={`heat-tag heat-${tag.level}`}>{tag.label}</span>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

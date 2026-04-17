@@ -170,12 +170,7 @@ export async function fetchHotUpcomingGames(): Promise<GameItem[]> {
   return Array.from(merged.values())
     .filter((item) => item.heat > HEAT_THRESHOLD)
     .filter((item) => isWithinNextYear(item.releaseDate))
-    .sort((a, b) => {
-      if (a.releaseDate !== b.releaseDate) {
-        return a.releaseDate.localeCompare(b.releaseDate);
-      }
-      return b.heat - a.heat;
-    })
+    .sort((a, b) => a.releaseDate.localeCompare(b.releaseDate))
     .map((item) => ({
       title: item.title,
       url: item.url,

@@ -1,7 +1,8 @@
-# 热门游戏发售表
+# 热门游戏 / 电影放映表
 
-一个极简风格的游戏发售网站：
+一个极简风格的发售/放映网站：
 - 数据源：第三方发售表（PC / PS5 / Switch）
+- 电影数据源：豆瓣即将上映表
 - 范围：未来 1 年
 - 筛选：热度 > 4000
 - 排序：按发售日期升序
@@ -47,6 +48,7 @@ curl "http://localhost:3000/api/sync?secret=your-secret"
 
 - `src/app/page.tsx`：首页表格页面
 - `src/lib/game-source.ts`：抓取与筛选逻辑
+- `src/lib/movie-source.ts`：电影放映抓取与筛选逻辑
 - `src/lib/db.ts`：数据库读写与同步
 - `src/app/api/sync/route.ts`：同步接口（可给 Cron 调用）
 - `src/app/api/image/route.ts`：海报代理接口（解决外链图床限制）
@@ -75,4 +77,8 @@ npx vercel --prod
 
 - 页面不再实时抓源站，速度更快；数据更新依赖 `/api/sync`。
 - 源站结构变化会影响抓取，请关注同步日志。
-- 当前版本只做“游戏”，电影功能后续再接入。
+- 当前版本支持“游戏 + 电影”双表格。
+
+## TODO
+
+- [ ] 为 iOS/Web 统一提供只读接口：`GET /api/games`（返回 `title/url/releaseDate/platforms/coverUrl/heatTag`，不暴露热度数字）

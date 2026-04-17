@@ -8,14 +8,46 @@ const ALLOWED_HOSTS = new Set([
   "imgs.gamersky.com",
   "image.gamersky.com",
   "www.gamersky.com",
+  "img1.doubanio.com",
+  "img2.doubanio.com",
+  "img3.doubanio.com",
+  "img9.doubanio.com",
+  "img.wmdb.tv",
+  "image.tmdb.org",
 ]);
 
 function isAllowed(url: URL): boolean {
   return ALLOWED_HOSTS.has(url.hostname);
 }
 
+function buildReferer(target: URL, rawRef: string): string {
+  if (target.hostname.endsWith("doubanio.com")) {
+    if (!rawRef) return "https://movie.douban.com/";
+
+    try {
+      const ref = new URL(rawRef);
+      if (ref.hostname === "movie.douban.com") return ref.toString();
+    } catch {
+      return "https://movie.douban.com/";
+    }
+
+    return "https://movie.douban.com/";
+  }
+
+  if (target.hostname === "img.wmdb.tv") {
+    return "https://api.wmdb.tv/";
+  }
+
+  if (target.hostname === "image.tmdb.org") {
+    return "https://www.themoviedb.org/";
+  }
+
+  return `${SOURCE_WEB}/`;
+}
+
 export async function GET(req: NextRequest) {
   const raw = req.nextUrl.searchParams.get("url") ?? "";
+  const rawRef = req.nextUrl.searchParams.get("ref") ?? "";
   if (!raw) {
     return new Response("missing url", { status: 400 });
   }
@@ -36,7 +68,7 @@ export async function GET(req: NextRequest) {
     upstream = await fetch(target.toString(), {
       headers: {
         "User-Agent": USER_AGENT,
-        Referer: `${SOURCE_WEB}/`,
+        Referer: buildReferer(target, rawRef),
       },
       cache: "no-store",
     });
