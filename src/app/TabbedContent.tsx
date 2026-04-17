@@ -129,6 +129,9 @@ export default function TabbedContent({ games, movies, dbError, syncInfo }: Tabb
     <>
       <header className="header">
         <h1>专属兴趣日历</h1>
+        <div className="calendar-links">
+          <a className="calendar-link" href="/calendar">📅 订阅日历</a>
+        </div>
       </header>
 
       <nav className="tab-bar" role="tablist">
