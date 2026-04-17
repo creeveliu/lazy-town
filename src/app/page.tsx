@@ -1,66 +1,79 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import { fetchHotUpcomingGames } from "@/lib/gamersky";
 
-export default function Home() {
+export const revalidate = 21600;
+
+function proxiedImageUrl(url: string): string {
+  return `/api/image?url=${encodeURIComponent(url)}`;
+}
+
+function heatTag(heat: number): { label: string; level: "low" | "mid" | "high" } {
+  if (heat >= 20000) return { label: "爆款", level: "high" };
+  if (heat >= 10000) return { label: "热门", level: "mid" };
+  return { label: "普通", level: "low" };
+}
+
+export default async function Home() {
+  const games = await fetchHotUpcomingGames();
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main className="container">
+      <header className="header">
+        <h1>热门游戏发售表</h1>
+      </header>
+
+      <section className="table-wrap">
+        <table className="game-table">
+          <thead>
+            <tr>
+              <th>海报</th>
+              <th>发售日</th>
+              <th>游戏名</th>
+              <th>平台</th>
+              <th>热度</th>
+            </tr>
+          </thead>
+          <tbody>
+            {games.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="empty">
+                  暂无满足条件的游戏
+                </td>
+              </tr>
+            ) : (
+              games.map((game) => {
+                const tag = heatTag(game.heat);
+                return (
+                <tr key={game.url}>
+                  <td>
+                    {game.coverUrl ? (
+                      <img
+                        className="cover"
+                        src={proxiedImageUrl(game.coverUrl)}
+                        alt={game.title}
+                        width={54}
+                        height={76}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="cover cover-placeholder">无图</div>
+                    )}
+                  </td>
+                  <td className="mono">{game.releaseDate}</td>
+                  <td className="title-cell">
+                    <a href={game.url} target="_blank" rel="noreferrer" className="title-link">
+                      {game.title}
+                    </a>
+                  </td>
+                  <td>{game.platforms.join(" / ")}</td>
+                  <td>
+                    <span className={`heat-tag heat-${tag.level}`}>{tag.label}</span>
+                  </td>
+                </tr>
+              )})
+            )}
+          </tbody>
+        </table>
+      </section>
+    </main>
   );
 }

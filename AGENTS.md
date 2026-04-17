@@ -1,5 +1,33 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# AGENTS
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+## 项目目标
+
+构建一个极简风格的“热门游戏发售表”网站。
+
+## 当前业务规则
+
+- 仅展示游戏（不含电影）
+- 数据来源：游民星空发售表
+- 平台：PC / PS5 / Switch
+- 时间范围：未来 1 年
+- 热度阈值：`> 4000`
+- 排序规则：按发售日期升序
+
+## UI 约束
+
+- 极简风格，信息密度高但不花哨
+- 主体为表格视图
+- 海报可展示但尺寸小
+- 不显示热度数字，仅显示标签：`普通 / 热门 / 爆款`
+
+## 交互约束
+
+- 不提供额外排序器
+- 游戏名可点击跳转详情页
+- 移动端优先保证可读性，避免横向溢出
+
+## 工程约束
+
+- 尽量保持服务端抓取逻辑简单直接
+- 变更优先最小改动
+- 每次改动后至少执行一次 `npm run lint`

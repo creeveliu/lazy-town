@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 热门游戏发售表
 
-## Getting Started
+一个极简风格的游戏发售网站：
+- 数据源：游民星空发售表（PC / PS5 / Switch）
+- 范围：未来 1 年
+- 筛选：热度 > 4000
+- 排序：按发售日期升序
+- 展示：表格 + 小海报 + 热度标签（普通 / 热门 / 爆款）
 
-First, run the development server:
+## 技术栈
+
+- Next.js 16 (App Router)
+- TypeScript
+- Cheerio（服务端解析页面）
+
+## 本地运行
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+默认访问：
+- http://localhost:3000
+- 若 3000 被占用，Next 会自动换端口（如 3001）
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 项目结构
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `src/app/page.tsx`：首页表格页面
+- `src/lib/gamersky.ts`：抓取与筛选逻辑
+- `src/app/api/image/route.ts`：海报代理接口（解决外链图床限制）
 
-## Learn More
+## 部署到 Vercel
 
-To learn more about Next.js, take a look at the following resources:
+1. 首次登录
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npx vercel login
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. 预览部署
 
-## Deploy on Vercel
+```bash
+npx vercel
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3. 生产部署
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npx vercel --prod
+```
+
+## 注意事项
+
+- 页面是服务端抓取实时数据，源站结构变化会影响抓取。
+- 当前版本只做“游戏”，电影功能后续再接入。
