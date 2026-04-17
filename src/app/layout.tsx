@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "热门游戏发售表",
-  description: "未来一年 PC / PS5 / Switch 热门游戏发售时间表",
+  title: "专属兴趣日历",
+  description: "热门游戏与电影未来一年发售/上映时间表",
 };
 
 export default function RootLayout({

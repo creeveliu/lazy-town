@@ -29,6 +29,37 @@ body {
   margin-bottom: 14px;
 }
 
+.tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--line);
+  margin-bottom: 0;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+
+.tab-button:hover {
+  color: var(--text);
+}
+
+.tab-button.active {
+  color: var(--text);
+  border-bottom-color: var(--text);
+  font-weight: 600;
+}
+
 .section-gap {
   margin-top: 20px;
 }
