@@ -1,11 +1,13 @@
 import { getGamesFromDb, getLatestSyncInfo, getMoviesFromDb } from "@/lib/db";
+import type { GameItem } from "@/lib/game-source";
+import type { MovieItem } from "@/lib/movie-source";
 import TabbedContent from "./TabbedContent";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  let games: any[] = [];
-  let movies: any[] = [];
+  let games: GameItem[] = [];
+  let movies: MovieItem[] = [];
   let syncInfo: { status: string; createdAt: string } | null = null;
   let dbError = "";
 

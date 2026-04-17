@@ -29,37 +29,6 @@ body {
   margin-bottom: 14px;
 }
 
-.tab-bar {
-  display: flex;
-  gap: 0;
-  border-bottom: 2px solid var(--line);
-  margin-bottom: 0;
-}
-
-.tab-button {
-  padding: 10px 20px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--muted);
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-  font-family: inherit;
-}
-
-.tab-button:hover {
-  color: var(--text);
-}
-
-.tab-button.active {
-  color: var(--text);
-  border-bottom-color: var(--text);
-  font-weight: 600;
-}
-
 .section-gap {
   margin-top: 20px;
 }
@@ -79,8 +48,20 @@ body {
 .table-wrap {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 0 0 10px 10px;
   overflow: auto;
+}
+
+/* Top row: tab bar + table top corners, rendered as one unit */
+.tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--line);
+  margin-bottom: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
 }
 
 .game-table {
@@ -202,7 +183,7 @@ tr.year-divider-row:hover {
 
   .game-table {
     min-width: 0;
-    table-layout: fixed;
+    table-layout: auto;
   }
 
   .game-table thead th:nth-child(1),
@@ -223,9 +204,16 @@ tr.year-divider-row:hover {
 
   .mono {
     font-size: 13px;
+    white-space: nowrap;
   }
 
   .heat-tag {
     font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .game-table thead th:last-child,
+  .game-table tbody td:last-child {
+    white-space: nowrap;
   }
 }
