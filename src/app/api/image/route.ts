@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+const SOURCE_WEB = "https://www.gamersky.com";
 
 const ALLOWED_HOSTS = new Set([
   "imgs.gamersky.com",
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
     upstream = await fetch(target.toString(), {
       headers: {
         "User-Agent": USER_AGENT,
-        Referer: "https://www.gamersky.com/",
+        Referer: `${SOURCE_WEB}/`,
       },
       cache: "no-store",
     });

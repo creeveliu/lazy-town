@@ -1,5 +1,5 @@
 import { neon } from "@neondatabase/serverless";
-import { fetchHotUpcomingGames, type GameItem } from "@/lib/gamersky";
+import { fetchHotUpcomingGames, type GameItem } from "@/lib/game-source";
 
 type DbGameRow = {
   title: string;

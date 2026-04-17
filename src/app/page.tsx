@@ -1,5 +1,5 @@
 import { getGamesFromDb, getLatestSyncInfo } from "@/lib/db";
-import type { GameItem } from "@/lib/gamersky";
+import type { GameItem } from "@/lib/game-source";
 
 export const dynamic = "force-dynamic";
 

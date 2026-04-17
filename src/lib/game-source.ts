@@ -20,6 +20,8 @@ type DraftGame = {
 
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+const SOURCE_WEB = "https://www.gamersky.com";
+const SOURCE_RELEASE = "https://ku.gamersky.com";
 const PLATFORM_CONFIG = [
   { key: "pc", label: "PC" },
   { key: "ps5", label: "PS5" },
@@ -45,8 +47,8 @@ function normalizeUrl(url: string): string {
   if (!url) return "";
   if (url.startsWith("//")) return `https:${url}`;
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  if (url.startsWith("/")) return `https://www.gamersky.com${url}`;
-  return `https://www.gamersky.com/${url}`;
+  if (url.startsWith("/")) return `${SOURCE_WEB}${url}`;
+  return `${SOURCE_WEB}/${url}`;
 }
 
 function parseExactDate(rawDate: string): string | null {
@@ -88,7 +90,7 @@ async function scrapeOne(url: string, platformLabel: string): Promise<DraftGame[
   const response = await fetch(url, {
     headers: {
       "User-Agent": USER_AGENT,
-      Referer: "https://ku.gamersky.com/",
+      Referer: `${SOURCE_RELEASE}/`,
     },
     cache: "no-store",
   });
@@ -140,7 +142,7 @@ export async function fetchHotUpcomingGames(): Promise<GameItem[]> {
 
   for (const monthKey of monthKeys) {
     for (const platform of PLATFORM_CONFIG) {
-      const url = `https://ku.gamersky.com/release/${platform.key}_${monthKey}/`;
+      const url = `${SOURCE_RELEASE}/release/${platform.key}_${monthKey}/`;
 
       let items: DraftGame[] = [];
       try {

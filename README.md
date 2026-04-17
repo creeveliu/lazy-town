@@ -1,7 +1,7 @@
 # 热门游戏发售表
 
 一个极简风格的游戏发售网站：
-- 数据源：游民星空发售表（PC / PS5 / Switch）
+- 数据源：第三方发售表（PC / PS5 / Switch）
 - 范围：未来 1 年
 - 筛选：热度 > 4000
 - 排序：按发售日期升序
@@ -46,7 +46,7 @@ curl "http://localhost:3000/api/sync?secret=your-secret"
 ## 项目结构
 
 - `src/app/page.tsx`：首页表格页面
-- `src/lib/gamersky.ts`：抓取与筛选逻辑
+- `src/lib/game-source.ts`：抓取与筛选逻辑
 - `src/lib/db.ts`：数据库读写与同步
 - `src/app/api/sync/route.ts`：同步接口（可给 Cron 调用）
 - `src/app/api/image/route.ts`：海报代理接口（解决外链图床限制）
