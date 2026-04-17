@@ -1,6 +1,7 @@
-import { fetchHotUpcomingGames } from "@/lib/gamersky";
+import { getGamesFromDb, getLatestSyncInfo } from "@/lib/db";
+import type { GameItem } from "@/lib/gamersky";
 
-export const revalidate = 21600;
+export const dynamic = "force-dynamic";
 
 function proxiedImageUrl(url: string): string {
   return `/api/image?url=${encodeURIComponent(url)}`;
@@ -13,7 +14,15 @@ function heatTag(heat: number): { label: string; level: "low" | "mid" | "high" }
 }
 
 export default async function Home() {
-  const games = await fetchHotUpcomingGames();
+  let games: GameItem[] = [];
+  let syncInfo: { status: string; createdAt: string } | null = null;
+  let dbError = "";
+
+  try {
+    [games, syncInfo] = await Promise.all([getGamesFromDb(), getLatestSyncInfo()]);
+  } catch (error) {
+    dbError = error instanceof Error ? error.message : "database error";
+  }
 
   return (
     <main className="container">
@@ -36,7 +45,9 @@ export default async function Home() {
             {games.length === 0 ? (
               <tr>
                 <td colSpan={5} className="empty">
-                  暂无满足条件的游戏
+                  {dbError
+                    ? `数据库不可用：${dbError}`
+                    : `暂无数据，请先访问 /api/sync 触发一次同步${syncInfo ? `（最近同步：${syncInfo.status}，${syncInfo.createdAt}）` : ""}`}
                 </td>
               </tr>
             ) : (
