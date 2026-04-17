@@ -48,20 +48,37 @@ body {
 .table-wrap {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 0 0 10px 10px;
+  border-radius: 10px;
   overflow: auto;
 }
 
-/* Top row: tab bar + table top corners, rendered as one unit */
 .tab-bar {
   display: flex;
-  gap: 0;
-  border-bottom: 2px solid var(--line);
-  margin-bottom: 0;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-bottom: none;
-  border-radius: 10px 10px 0 0;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tab-button {
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  border-radius: 6px;
+}
+
+.tab-button:hover {
+  color: var(--text);
+  background: #f2f4f7;
+}
+
+.tab-button.active {
+  color: var(--text);
+  font-weight: 600;
+  background: #eef0f5;
 }
 
 .game-table {
