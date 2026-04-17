@@ -28,6 +28,7 @@ export default async function Home() {
   let movies: MovieItem[] = [];
   let syncInfo: { status: string; createdAt: string } | null = null;
   let dbError = "";
+  const currentYear = new Date().getFullYear();
 
   try {
     [games, movies, syncInfo] = await Promise.all([getGamesFromDb(), getMoviesFromDb(), getLatestSyncInfo()]);
@@ -64,34 +65,36 @@ export default async function Home() {
             ) : (
               games.map((game) => {
                 const tag = heatTag(game.heat);
+                const monthDay = game.releaseDate.slice(5);
                 return (
-                <tr key={game.url}>
-                  <td>
-                    {game.coverUrl ? (
-                      <img
-                        className="cover"
-                        src={proxiedImageUrl(game.coverUrl)}
-                        alt={game.title}
-                        width={54}
-                        height={76}
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="cover cover-placeholder">无图</div>
-                    )}
-                  </td>
-                  <td className="mono">{game.releaseDate}</td>
-                  <td className="title-cell">
-                    <a href={game.url} target="_blank" rel="noreferrer" className="title-link">
-                      {game.title}
-                    </a>
-                  </td>
-                  <td>{game.platforms.join(" / ")}</td>
-                  <td>
-                    <span className={`heat-tag heat-${tag.level}`}>{tag.label}</span>
-                  </td>
-                </tr>
-              )})
+                  <tr key={game.url}>
+                    <td>
+                      {game.coverUrl ? (
+                        <img
+                          className="cover"
+                          src={proxiedImageUrl(game.coverUrl)}
+                          alt={game.title}
+                          width={54}
+                          height={76}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="cover cover-placeholder">无图</div>
+                      )}
+                    </td>
+                    <td className="mono">{monthDay}</td>
+                    <td className="title-cell">
+                      <a href={game.url} target="_blank" rel="noreferrer" className="title-link">
+                        {game.title}
+                      </a>
+                    </td>
+                    <td>{game.platforms.join(" / ")}</td>
+                    <td>
+                      <span className={`heat-tag heat-${tag.level}`}>{tag.label}</span>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -122,9 +125,28 @@ export default async function Home() {
                 </td>
               </tr>
             ) : (
-              movies.map((movie) => {
+              movies.flatMap((movie, index) => {
                 const tag = movieWishTag(movie.wish);
-                return (
+                const year = Number.parseInt(movie.releaseDate.slice(0, 4), 10);
+                const monthDay = movie.releaseDate.slice(5);
+
+                const previousYear =
+                  index > 0 ? Number.parseInt(movies[index - 1].releaseDate.slice(0, 4), 10) : currentYear;
+
+                const shouldShowYearHeader = year !== currentYear && year !== previousYear;
+                const rows = [];
+
+                if (shouldShowYearHeader) {
+                  rows.push(
+                    <tr key={`year-${year}`} className="year-divider-row">
+                      <td colSpan={5} className="year-divider">
+                        {year}
+                      </td>
+                    </tr>,
+                  );
+                }
+
+                rows.push(
                   <tr key={movie.url}>
                     <td>
                       {movie.coverUrl ? (
@@ -140,7 +162,7 @@ export default async function Home() {
                         <div className="cover cover-placeholder">无图</div>
                       )}
                     </td>
-                    <td className="mono">{movie.releaseDate}</td>
+                    <td className="mono">{monthDay}</td>
                     <td className="title-cell">
                       <a href={movie.url} target="_blank" rel="noreferrer" className="title-link">
                         {movie.title}
@@ -150,8 +172,10 @@ export default async function Home() {
                     <td>
                       <span className={`heat-tag heat-${tag.level}`}>{tag.label}</span>
                     </td>
-                  </tr>
+                  </tr>,
                 );
+
+                return rows;
               })
             )}
           </tbody>

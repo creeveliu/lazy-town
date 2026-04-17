@@ -147,13 +147,26 @@ body {
   padding: 26px 12px !important;
 }
 
+.year-divider {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--muted);
+  background: #f8fafc;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 12px !important;
+}
+
+tr.year-divider-row:hover {
+  background: transparent !important;
+}
+
 @media (max-width: 768px) {
   .container {
     padding: 20px 12px 28px;
   }
 
   .header h1 {
-    font-size: 20px;
+    font-size: 22px;
   }
 
   .game-table {
@@ -161,19 +174,27 @@ body {
     table-layout: fixed;
   }
 
-  .game-table th:nth-child(1),
-  .game-table td:nth-child(1) {
+  .game-table thead th:nth-child(1),
+  .game-table tbody tr:not(.year-divider-row) td:nth-child(1) {
     display: none;
   }
 
   .game-table th,
   .game-table td {
-    padding: 8px 6px;
-    font-size: 12px;
+    padding: 10px 8px;
+    font-size: 13px;
   }
 
   .title-cell {
     max-width: none;
     word-break: break-word;
+  }
+
+  .mono {
+    font-size: 13px;
+  }
+
+  .heat-tag {
+    font-size: 12px;
   }
 }
