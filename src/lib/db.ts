@@ -142,7 +142,7 @@ export async function getGamesFromDb(): Promise<GameItem[]> {
       platforms,
       cover_url
     FROM games
-    WHERE release_date >= CURRENT_DATE
+    WHERE release_date >= (CURRENT_DATE - INTERVAL '14 days')
       AND release_date <= (CURRENT_DATE + INTERVAL '365 days')
       AND heat > 4000
     ORDER BY release_date ASC
@@ -190,7 +190,7 @@ export async function getMoviesFromDb(): Promise<MovieItem[]> {
       country,
       cover_url
     FROM movies
-    WHERE release_date >= CURRENT_DATE
+    WHERE release_date >= (CURRENT_DATE - INTERVAL '14 days')
       AND release_date <= (CURRENT_DATE + INTERVAL '365 days')
     ORDER BY release_date ASC
   `) as DbMovieRow[];
@@ -224,7 +224,7 @@ export async function getOnlineMoviesFromDb(): Promise<OnlineMovieItem[]> {
     FROM online_movies
     WHERE online_date IS NULL
       OR (
-        online_date >= CURRENT_DATE
+        online_date >= (CURRENT_DATE - INTERVAL '14 days')
         AND online_date <= (CURRENT_DATE + INTERVAL '365 days')
       )
     ORDER BY online_date ASC NULLS LAST, reservation_count DESC
