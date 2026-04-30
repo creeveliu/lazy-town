@@ -258,14 +258,31 @@ export async function syncGamesToDb(): Promise<SyncResult> {
 
     await sql`BEGIN`;
     try {
-      await sql`TRUNCATE TABLE games`;
-      await sql`TRUNCATE TABLE movies`;
-      await sql`TRUNCATE TABLE online_movies`;
+      await sql`
+        DELETE FROM games
+        WHERE release_date < (CURRENT_DATE - INTERVAL '14 days')
+      `;
+      await sql`
+        DELETE FROM movies
+        WHERE release_date < (CURRENT_DATE - INTERVAL '14 days')
+      `;
+      await sql`
+        DELETE FROM online_movies
+        WHERE online_date IS NOT NULL
+          AND online_date < (CURRENT_DATE - INTERVAL '14 days')
+      `;
 
       for (const game of games) {
         await sql`
           INSERT INTO games (source_url, title, release_date, heat, platforms, cover_url, updated_at)
           VALUES (${game.url}, ${game.title}, ${game.releaseDate}, ${game.heat}, ${game.platforms}, ${game.coverUrl || ""}, NOW())
+          ON CONFLICT (source_url) DO UPDATE SET
+            title = EXCLUDED.title,
+            release_date = EXCLUDED.release_date,
+            heat = EXCLUDED.heat,
+            platforms = EXCLUDED.platforms,
+            cover_url = EXCLUDED.cover_url,
+            updated_at = NOW()
         `;
       }
 
@@ -273,6 +290,14 @@ export async function syncGamesToDb(): Promise<SyncResult> {
         await sql`
           INSERT INTO movies (source_url, title, release_date, wish, genres, country, cover_url, updated_at)
           VALUES (${movie.url}, ${movie.title}, ${movie.releaseDate}, ${movie.wish}, ${movie.genres}, ${movie.country}, ${movie.coverUrl || ""}, NOW())
+          ON CONFLICT (source_url) DO UPDATE SET
+            title = EXCLUDED.title,
+            release_date = EXCLUDED.release_date,
+            wish = EXCLUDED.wish,
+            genres = EXCLUDED.genres,
+            country = EXCLUDED.country,
+            cover_url = EXCLUDED.cover_url,
+            updated_at = NOW()
         `;
       }
 
@@ -302,6 +327,16 @@ export async function syncGamesToDb(): Promise<SyncResult> {
             ${movie.coverUrl || ""},
             NOW()
           )
+          ON CONFLICT (source_url) DO UPDATE SET
+            title = EXCLUDED.title,
+            online_date = EXCLUDED.online_date,
+            platforms = EXCLUDED.platforms,
+            source_name = EXCLUDED.source_name,
+            status = EXCLUDED.status,
+            reservation_count = EXCLUDED.reservation_count,
+            confidence = EXCLUDED.confidence,
+            cover_url = EXCLUDED.cover_url,
+            updated_at = NOW()
         `;
       }
 
