@@ -142,15 +142,15 @@ export default function TabbedContent({ games, movies, onlineMovies, dbError, sy
         <td>
           {movie.coverUrl ? (
             <img
-              className="cover"
+              className="cover online-cover"
               src={proxiedImageUrl(movie.coverUrl, movie.url)}
               alt={movie.title}
-              width={54}
-              height={76}
+              width={72}
+              height={54}
               loading="lazy"
             />
           ) : (
-            <div className="cover cover-placeholder">无图</div>
+            <div className="cover online-cover cover-placeholder">无图</div>
           )}
         </td>
         <td className={movie.onlineDate ? "mono" : ""}>{monthDay}</td>
@@ -262,7 +262,7 @@ export default function TabbedContent({ games, movies, onlineMovies, dbError, sy
         <table className="game-table">
           <thead>
             <tr>
-              <th>海报</th>
+              <th>封面</th>
               <th>上线日</th>
               <th>片名</th>
               <th>平台</th>

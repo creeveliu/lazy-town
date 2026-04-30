@@ -261,6 +261,11 @@ body {
   background: #f4f6fb;
 }
 
+.online-cover {
+  width: 72px;
+  height: 54px;
+}
+
 .cover-placeholder {
   display: grid;
   place-items: center;
