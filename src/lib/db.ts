@@ -1,6 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import { fetchHotUpcomingGames, type GameItem } from "@/lib/game-source";
 import { fetchUpcomingMovies, type MovieItem } from "@/lib/movie-source";
+import { fetchOnlineMovies, type OnlineMovieItem } from "@/lib/online-movie-source";
 
 type DbGameRow = {
   title: string;
@@ -21,9 +22,22 @@ type DbMovieRow = {
   cover_url: string;
 };
 
+type DbOnlineMovieRow = {
+  title: string;
+  source_url: string;
+  online_date: string;
+  platforms: string[];
+  source_name: string;
+  status: string;
+  reservation_count: number;
+  confidence: number;
+  cover_url: string;
+};
+
 export type SyncResult = {
   syncedCount: number;
   movieSyncedCount: number;
+  onlineMovieSyncedCount: number;
   durationMs: number;
 };
 
@@ -86,6 +100,26 @@ export async function ensureSchema() {
 
   await sql`
     CREATE INDEX IF NOT EXISTS idx_movies_release_date ON movies (release_date)
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS online_movies (
+      id BIGSERIAL PRIMARY KEY,
+      source_url TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      online_date DATE NOT NULL,
+      platforms TEXT[] NOT NULL,
+      source_name TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT '',
+      reservation_count INTEGER NOT NULL DEFAULT 0,
+      confidence INTEGER NOT NULL DEFAULT 0,
+      cover_url TEXT NOT NULL DEFAULT '',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_online_movies_online_date ON online_movies (online_date)
   `;
 
   schemaReady = true;
@@ -168,6 +202,40 @@ export async function getMoviesFromDb(): Promise<MovieItem[]> {
   }));
 }
 
+export async function getOnlineMoviesFromDb(): Promise<OnlineMovieItem[]> {
+  await ensureSchema();
+  const sql = getSql();
+
+  const rows = (await sql`
+    SELECT
+      title,
+      source_url,
+      online_date::text AS online_date,
+      platforms,
+      source_name,
+      status,
+      reservation_count,
+      confidence,
+      cover_url
+    FROM online_movies
+    WHERE online_date >= CURRENT_DATE
+      AND online_date <= (CURRENT_DATE + INTERVAL '365 days')
+    ORDER BY online_date ASC
+  `) as DbOnlineMovieRow[];
+
+  return rows.map((row) => ({
+    title: row.title,
+    url: row.source_url,
+    onlineDate: row.online_date,
+    platforms: row.platforms ?? [],
+    sourceName: row.source_name,
+    status: row.status,
+    reservationCount: row.reservation_count,
+    confidence: row.confidence,
+    coverUrl: row.cover_url,
+  }));
+}
+
 export async function syncGamesToDb(): Promise<SyncResult> {
   await ensureSchema();
   const sql = getSql();
@@ -175,13 +243,17 @@ export async function syncGamesToDb(): Promise<SyncResult> {
   const started = Date.now();
 
   try {
-    const games = await fetchHotUpcomingGames();
-    const movies = await fetchUpcomingMovies();
+    const [games, movies, onlineMovieResult] = await Promise.all([
+      fetchHotUpcomingGames(),
+      fetchUpcomingMovies(),
+      fetchOnlineMovies().catch(() => [] as OnlineMovieItem[]),
+    ]);
 
     await sql`BEGIN`;
     try {
       await sql`TRUNCATE TABLE games`;
       await sql`TRUNCATE TABLE movies`;
+      await sql`TRUNCATE TABLE online_movies`;
 
       for (const game of games) {
         await sql`
@@ -197,14 +269,48 @@ export async function syncGamesToDb(): Promise<SyncResult> {
         `;
       }
 
+      for (const movie of onlineMovieResult) {
+        await sql`
+          INSERT INTO online_movies (
+            source_url,
+            title,
+            online_date,
+            platforms,
+            source_name,
+            status,
+            reservation_count,
+            confidence,
+            cover_url,
+            updated_at
+          )
+          VALUES (
+            ${movie.url},
+            ${movie.title},
+            ${movie.onlineDate},
+            ${movie.platforms},
+            ${movie.sourceName},
+            ${movie.status},
+            ${movie.reservationCount},
+            ${movie.confidence},
+            ${movie.coverUrl || ""},
+            NOW()
+          )
+        `;
+      }
+
       const durationMs = Date.now() - started;
       await sql`
         INSERT INTO sync_logs (status, synced_count, duration_ms)
-        VALUES ('ok', ${games.length + movies.length}, ${durationMs})
+        VALUES ('ok', ${games.length + movies.length + onlineMovieResult.length}, ${durationMs})
       `;
 
       await sql`COMMIT`;
-      return { syncedCount: games.length, movieSyncedCount: movies.length, durationMs };
+      return {
+        syncedCount: games.length,
+        movieSyncedCount: movies.length,
+        onlineMovieSyncedCount: onlineMovieResult.length,
+        durationMs,
+      };
     } catch (error) {
       await sql`ROLLBACK`;
       throw error;
