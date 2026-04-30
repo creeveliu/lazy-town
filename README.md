@@ -36,7 +36,12 @@ npm run dev
 ```bash
 DATABASE_URL=postgres://...
 CRON_SECRET=your-secret
+RESEND_API_KEY=re_...
+SYNC_ALERT_EMAIL_TO=you@example.com
+SYNC_ALERT_EMAIL_FROM="Lazy Town <notify@your-domain.com>"
 ```
+
+`RESEND_API_KEY` 和 `SYNC_ALERT_EMAIL_TO` 配好后，`/api/sync` 同步失败会发邮件；不配置则只写 `sync_logs`。
 
 ## 首次同步数据
 

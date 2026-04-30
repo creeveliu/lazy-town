@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { syncGamesToDb } from "@/lib/db";
+import { sendSyncFailureEmail } from "@/lib/sync-alert";
 
 export const runtime = "nodejs";
 
@@ -24,6 +25,13 @@ async function handle(req: NextRequest) {
     return Response.json({ ok: true, ...result });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown error";
+    await sendSyncFailureEmail({
+      message,
+      method: req.method,
+      url: req.url,
+    }).catch((emailError) => {
+      console.error("Failed to send sync failure email", emailError);
+    });
     return Response.json({ ok: false, error: message }, { status: 500 });
   }
 }
