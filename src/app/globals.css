@@ -254,7 +254,7 @@ body {
 .cover {
   width: 54px;
   height: 76px;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 6px;
   border: 1px solid var(--line);
   display: block;
