@@ -3,7 +3,7 @@ import { load } from "cheerio";
 export type OnlineMovieItem = {
   title: string;
   url: string;
-  onlineDate: string;
+  onlineDate: string | null;
   platforms: string[];
   sourceName: string;
   status: string;
@@ -22,6 +22,7 @@ const IQIYI_NEW_ONLINE_URL =
 const TENCENT_MOVIE_URL = "https://v.qq.com/channel/movie";
 const TENCENT_PAGE_ID = "100173";
 const RESERVATION_THRESHOLD = 5000;
+const TBA_RESERVATION_THRESHOLD = 50000;
 
 function normalizeText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
@@ -309,8 +310,9 @@ async function fetchTencentOnlineMovies(): Promise<DraftOnlineMovie[]> {
     const title = normalizeText(params.priority_title || params.title || "");
     const onlineDate = parseOnlineDate(params.online_time || "");
     const reservationCount = Number.parseInt(params.order_person_count || "", 10) || 0;
+    const minReservationCount = onlineDate ? RESERVATION_THRESHOLD : TBA_RESERVATION_THRESHOLD;
 
-    if (!title || !onlineDate || reservationCount < RESERVATION_THRESHOLD) continue;
+    if (!title || reservationCount < minReservationCount) continue;
 
     rows.push({
       title,
@@ -318,9 +320,9 @@ async function fetchTencentOnlineMovies(): Promise<DraftOnlineMovie[]> {
       onlineDate,
       platforms: ["腾讯视频"],
       sourceName: "腾讯视频电影",
-      status: "上线",
+      status: onlineDate ? "上线" : "敬请期待",
       reservationCount,
-      confidence: 85,
+      confidence: onlineDate ? 85 : 70,
       coverUrl: normalizeUrl(params.priority_image_url || params.image_url || "", "https://v.qq.com"),
     });
   }
@@ -332,7 +334,7 @@ function mergeRows(rows: DraftOnlineMovie[]): OnlineMovieItem[] {
   const merged = new Map<string, DraftOnlineMovie>();
 
   for (const row of rows) {
-    const key = `${row.title}-${row.onlineDate}`;
+    const key = `${row.title}-${row.onlineDate ?? "TBA"}`;
     const existing = merged.get(key);
     if (!existing) {
       merged.set(key, { ...row, platforms: [...row.platforms] });
@@ -352,7 +354,12 @@ function mergeRows(rows: DraftOnlineMovie[]): OnlineMovieItem[] {
     }
   }
 
-  return Array.from(merged.values()).sort((a, b) => a.onlineDate.localeCompare(b.onlineDate));
+  return Array.from(merged.values()).sort((a, b) => {
+    if (a.onlineDate && b.onlineDate) return a.onlineDate.localeCompare(b.onlineDate);
+    if (a.onlineDate) return -1;
+    if (b.onlineDate) return 1;
+    return b.reservationCount - a.reservationCount;
+  });
 }
 
 export async function fetchOnlineMovies(): Promise<OnlineMovieItem[]> {

@@ -25,7 +25,7 @@ type DbMovieRow = {
 type DbOnlineMovieRow = {
   title: string;
   source_url: string;
-  online_date: string;
+  online_date: string | null;
   platforms: string[];
   source_name: string;
   status: string;
@@ -107,7 +107,7 @@ export async function ensureSchema() {
       id BIGSERIAL PRIMARY KEY,
       source_url TEXT NOT NULL UNIQUE,
       title TEXT NOT NULL,
-      online_date DATE NOT NULL,
+      online_date DATE,
       platforms TEXT[] NOT NULL,
       source_name TEXT NOT NULL DEFAULT '',
       status TEXT NOT NULL DEFAULT '',
@@ -116,6 +116,10 @@ export async function ensureSchema() {
       cover_url TEXT NOT NULL DEFAULT '',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+
+  await sql`
+    ALTER TABLE online_movies ALTER COLUMN online_date DROP NOT NULL
   `;
 
   await sql`
@@ -218,9 +222,12 @@ export async function getOnlineMoviesFromDb(): Promise<OnlineMovieItem[]> {
       confidence,
       cover_url
     FROM online_movies
-    WHERE online_date >= CURRENT_DATE
-      AND online_date <= (CURRENT_DATE + INTERVAL '365 days')
-    ORDER BY online_date ASC
+    WHERE online_date IS NULL
+      OR (
+        online_date >= CURRENT_DATE
+        AND online_date <= (CURRENT_DATE + INTERVAL '365 days')
+      )
+    ORDER BY online_date ASC NULLS LAST, reservation_count DESC
   `) as DbOnlineMovieRow[];
 
   return rows.map((row) => ({

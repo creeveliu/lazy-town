@@ -135,7 +135,7 @@ export default function TabbedContent({ games, movies, onlineMovies, dbError, sy
 
   const onlineMovieRows = onlineMovies.map((movie) => {
     const tag = onlineReservationTag(movie.reservationCount);
-    const monthDay = movie.onlineDate.slice(5);
+    const monthDay = movie.onlineDate ? movie.onlineDate.slice(5) : "待定";
 
     return (
       <tr key={movie.url}>
@@ -153,7 +153,7 @@ export default function TabbedContent({ games, movies, onlineMovies, dbError, sy
             <div className="cover cover-placeholder">无图</div>
           )}
         </td>
-        <td className="mono">{monthDay}</td>
+        <td className={movie.onlineDate ? "mono" : ""}>{monthDay}</td>
         <td className="title-cell">
           <a href={movie.url} target="_blank" rel="noreferrer" className="title-link">
             {movie.title}

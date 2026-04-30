@@ -28,6 +28,8 @@ export async function GET() {
   ];
 
   for (const movie of movies) {
+    if (!movie.onlineDate) continue;
+
     const platforms = movie.platforms.join(", ");
     const summary = `${movie.title} 上线 ${platforms}`;
     const description = `${escapeText(platforms)} | ${escapeText(movie.sourceName)} | ${escapeText(movie.url)}`;
