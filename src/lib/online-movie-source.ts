@@ -22,7 +22,7 @@ const IQIYI_NEW_ONLINE_URL =
 const TENCENT_MOVIE_URL = "https://v.qq.com/channel/movie";
 const TENCENT_PAGE_ID = "100173";
 const RESERVATION_THRESHOLD = 5000;
-const TBA_RESERVATION_THRESHOLD = 50000;
+const TBA_RESERVATION_THRESHOLD = 200000;
 
 function normalizeText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
@@ -78,7 +78,7 @@ function parseOnlineDate(raw: string): string | null {
 
 function parseReservationCount(raw: string): number {
   const value = normalizeText(raw).replace(/,/g, "");
-  const match = value.match(/(\d+(?:\.\d+)?)\s*万?人?(?:已)?预约/);
+  const match = value.match(/(\d+(?:\.\d+)?)\s*万?\s*人?(?:(?:已)?预约)?/);
   if (!match) return 0;
 
   const count = Number.parseFloat(match[1]);
@@ -128,15 +128,17 @@ async function fetchYoukuOnlineMovies(): Promise<DraftOnlineMovie[]> {
   const $ = load(html);
   const rows: DraftOnlineMovie[] = [];
 
-  $('div[class^="pack_title"], div[class*=" pack_title"]').each((_, el) => {
-    const title = normalizeText($(el).text());
-    const link = $(el).closest("a");
-    const container = link.parent().parent();
-    const status = normalizeText(container.find('div[class^="subtitle"], div[class*=" subtitle"]').first().text());
+  $('div[class^="reserveCard"], div[class*=" reserveCard"]').each((_, el) => {
+    const card = $(el);
+    const link = card.find("a[href]").first();
+    const title = normalizeText(card.find('div[class^="pack_title"], div[class*=" pack_title"]').first().text());
+    const status = normalizeText(card.find('div[class^="subtitle"], div[class*=" subtitle"]').first().text());
     const onlineDate = parseOnlineDate(status);
-    const reservationCount = parseReservationCount(container.text());
+    const reservationText = normalizeText(card.find('span[class^="number"], span[class*=" number"]').first().text());
+    const reservationCount = parseReservationCount(reservationText || card.text());
+    const minReservationCount = onlineDate ? RESERVATION_THRESHOLD : TBA_RESERVATION_THRESHOLD;
 
-    if (!title || !onlineDate || status.includes("敬请期待") || reservationCount < RESERVATION_THRESHOLD) return;
+    if (!title || reservationCount < minReservationCount) return;
 
     rows.push({
       title,
@@ -144,10 +146,10 @@ async function fetchYoukuOnlineMovies(): Promise<DraftOnlineMovie[]> {
       onlineDate,
       platforms: ["优酷"],
       sourceName: "优酷电影",
-      status: "上线",
+      status: onlineDate ? "上线" : "敬请期待",
       reservationCount,
-      confidence: 90,
-      coverUrl: normalizeUrl(link.find("img").first().attr("src") ?? "", "https://www.youku.com"),
+      confidence: onlineDate ? 90 : 70,
+      coverUrl: normalizeUrl(link.find("img").first().attr("src") || link.find("img").first().attr("data-src") || "", "https://www.youku.com"),
     });
   });
 
