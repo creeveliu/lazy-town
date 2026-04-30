@@ -3,10 +3,12 @@
 import { useState } from "react";
 import type { GameItem } from "@/lib/game-source";
 import type { MovieItem } from "@/lib/movie-source";
+import type { OnlineMovieItem } from "@/lib/online-movie-source";
 
 type TabbedContentProps = {
   games: GameItem[];
   movies: MovieItem[];
+  onlineMovies: OnlineMovieItem[];
   dbError: string;
   syncInfo: { status: string; createdAt: string } | null;
 };
@@ -30,9 +32,15 @@ function movieWishTag(wish: number): { label: string; level: "low" | "mid" | "hi
   return { label: "普通", level: "low" };
 }
 
-export default function TabbedContent({ games, movies, dbError, syncInfo }: TabbedContentProps) {
+function onlineReservationTag(count: number): { label: string; level: "low" | "mid" | "high" } {
+  if (count >= 50000) return { label: "爆款", level: "high" };
+  if (count >= 10000) return { label: "热门", level: "mid" };
+  return { label: "普通", level: "low" };
+}
+
+export default function TabbedContent({ games, movies, onlineMovies, dbError, syncInfo }: TabbedContentProps) {
   const currentYear = new Date().getFullYear();
-  const [activeTab, setActiveTab] = useState<"games" | "movies">("games");
+  const [activeTab, setActiveTab] = useState<"games" | "movies" | "onlineMovies">("games");
   const [showCalendar, setShowCalendar] = useState(false);
 
   const handleSubscribe = (path: string) => {
@@ -125,6 +133,40 @@ export default function TabbedContent({ games, movies, dbError, syncInfo }: Tabb
     return rows;
   });
 
+  const onlineMovieRows = onlineMovies.map((movie) => {
+    const tag = onlineReservationTag(movie.reservationCount);
+    const monthDay = movie.onlineDate.slice(5);
+
+    return (
+      <tr key={movie.url}>
+        <td>
+          {movie.coverUrl ? (
+            <img
+              className="cover"
+              src={proxiedImageUrl(movie.coverUrl, movie.url)}
+              alt={movie.title}
+              width={54}
+              height={76}
+              loading="lazy"
+            />
+          ) : (
+            <div className="cover cover-placeholder">无图</div>
+          )}
+        </td>
+        <td className="mono">{monthDay}</td>
+        <td className="title-cell">
+          <a href={movie.url} target="_blank" rel="noreferrer" className="title-link">
+            {movie.title}
+          </a>
+        </td>
+        <td>{movie.platforms.join(" / ")}</td>
+        <td>
+          <span className={`heat-tag heat-${tag.level}`}>{tag.label}</span>
+        </td>
+      </tr>
+    );
+  });
+
   const emptyMessage = (type: string) =>
     dbError
       ? `数据库不可用：${dbError}`
@@ -154,7 +196,15 @@ export default function TabbedContent({ games, movies, dbError, syncInfo }: Tabb
           className={`tab-button ${activeTab === "movies" ? "active" : ""}`}
           onClick={() => setActiveTab("movies")}
         >
-          电影
+          院线电影
+        </button>
+        <button
+          role="tab"
+          aria-selected={activeTab === "onlineMovies"}
+          className={`tab-button ${activeTab === "onlineMovies" ? "active" : ""}`}
+          onClick={() => setActiveTab("onlineMovies")}
+        >
+          在线电影
         </button>
       </nav>
 
@@ -203,6 +253,31 @@ export default function TabbedContent({ games, movies, dbError, syncInfo }: Tabb
               </tr>
             ) : (
               movieRows
+            )}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="table-wrap tab-panel" hidden={activeTab !== "onlineMovies"}>
+        <table className="game-table">
+          <thead>
+            <tr>
+              <th>海报</th>
+              <th>上线日</th>
+              <th>片名</th>
+              <th>平台</th>
+              <th>热度</th>
+            </tr>
+          </thead>
+          <tbody>
+            {onlineMovies.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="empty">
+                  {emptyMessage("在线电影")}
+                </td>
+              </tr>
+            ) : (
+              onlineMovieRows
             )}
           </tbody>
         </table>
@@ -267,6 +342,30 @@ export default function TabbedContent({ games, movies, dbError, syncInfo }: Tabb
                 <span className="modal-link-text">
                   <span className="modal-link-title">电影上映表</span>
                   <span className="modal-link-hint">近期热门电影</span>
+                </span>
+              </a>
+
+              <a
+                className="modal-link"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSubscribe("/api/calendar/online-movies");
+                }}
+              >
+                <span className="modal-link-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="2" />
+                    <path d="M7 3v18" />
+                    <path d="M3 7.5h4" />
+                    <path d="M3 12h18" />
+                    <path d="M17 3v18" />
+                    <path d="m10 9 5 3-5 3Z" />
+                  </svg>
+                </span>
+                <span className="modal-link-text">
+                  <span className="modal-link-title">在线电影上线表</span>
+                  <span className="modal-link-hint">爱奇艺 / 腾讯视频 / 优酷</span>
                 </span>
               </a>
             </div>

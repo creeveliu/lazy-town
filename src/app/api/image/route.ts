@@ -14,6 +14,22 @@ const ALLOWED_HOSTS = new Set([
   "img9.doubanio.com",
   "img.wmdb.tv",
   "image.tmdb.org",
+  "liangcang-material.alicdn.com",
+  "m.ykimg.com",
+  "pic1.iqiyipic.com",
+  "pic2.iqiyipic.com",
+  "pic3.iqiyipic.com",
+  "pic4.iqiyipic.com",
+  "pic5.iqiyipic.com",
+  "pic6.iqiyipic.com",
+  "pic7.iqiyipic.com",
+  "pic8.iqiyipic.com",
+  "pic9.iqiyipic.com",
+  "puui.qpic.cn",
+  "tv.puui.qpic.cn",
+  "vmmp.qpic.cn",
+  "vcover-hz-pic.puui.qpic.cn",
+  "gif.media.qpic.cn",
 ]);
 
 function isAllowed(url: URL): boolean {
@@ -40,6 +56,18 @@ function buildReferer(target: URL, rawRef: string): string {
 
   if (target.hostname === "image.tmdb.org") {
     return "https://www.themoviedb.org/";
+  }
+
+  if (target.hostname.endsWith("alicdn.com") || target.hostname.endsWith("ykimg.com")) {
+    return "https://www.youku.com/";
+  }
+
+  if (target.hostname.endsWith("iqiyipic.com")) {
+    return "https://www.iqiyi.com/";
+  }
+
+  if (target.hostname.endsWith("qpic.cn")) {
+    return "https://v.qq.com/";
   }
 
   return `${SOURCE_WEB}/`;
