@@ -20,6 +20,7 @@ const YOUKU_MOVIE_URL = "https://www.youku.com/ku/webmovie";
 const IQIYI_NEW_ONLINE_URL =
   "https://www.iqiyi.com/newOnlinePCW?deviceId=9abd3d88d08f1d65da7036e973c139bd&v=12.112.20682";
 const TENCENT_MOVIE_URL = "https://v.qq.com/channel/movie";
+const TENCENT_PAGE_ID = "100173";
 const RESERVATION_THRESHOLD = 5000;
 
 function normalizeText(value: string): string {
@@ -103,6 +104,22 @@ async function fetchHtml(url: string, referer?: string): Promise<string> {
   return response.text();
 }
 
+async function fetchJson<T>(url: string, body: unknown, referer: string): Promise<T | null> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": USER_AGENT,
+      Referer: referer,
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+
+  if (!response.ok) return null;
+  return response.json() as Promise<T>;
+}
+
 async function fetchYoukuOnlineMovies(): Promise<DraftOnlineMovie[]> {
   const html = await fetchHtml(YOUKU_MOVIE_URL, "https://www.youku.com/");
   if (!html) return [];
@@ -178,41 +195,133 @@ async function fetchIqiyiOnlineMovies(): Promise<DraftOnlineMovie[]> {
   return rows;
 }
 
-function extractTencentComingBlock(html: string): string {
-  const tabIndex = html.indexOf('tab_type:"coming_soon"');
-  if (tabIndex < 0) return "";
-  return html.slice(tabIndex, tabIndex + 80_000);
+type TencentCard = {
+  id?: string;
+  type?: string;
+  params?: Record<string, string | undefined>;
+  children_list?: Record<string, { cards?: TencentCard[] } | undefined>;
+  flip_infos?: {
+    change?: Record<string, unknown>;
+  };
+};
+
+type TencentPageResponse = {
+  ret?: number;
+  data?: {
+    CardList?: TencentCard[];
+  };
+};
+
+type TencentCardResponse = {
+  ret?: number;
+  data?: {
+    card?: TencentCard;
+  };
+};
+
+type TencentTab = {
+  tab_mvl_sub_mod_id?: string;
+  tab_name?: string;
+  tab_type?: string;
+};
+
+function createTencentGuid(): string {
+  return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+}
+
+function getTencentChildCards(card: TencentCard | null | undefined): TencentCard[] {
+  if (!card?.children_list) return [];
+  return Object.values(card.children_list).flatMap((list) => list?.cards ?? []);
+}
+
+async function fetchTencentComingSoonCard(): Promise<TencentCard | null> {
+  const guid = createTencentGuid();
+  const pageUrl = `https://pbaccess.video.qq.com/trpc.vector_layout.page_view.PageService/getPage?video_appid=3000010&vversion_platform=2&vdevice_guid=${guid}`;
+  const pageBody = {
+    page_params: {
+      page_type: "channel",
+      page_id: TENCENT_PAGE_ID,
+      scene: "channel",
+      new_mark_label_enabled: "1",
+      vl_to_mvl: "",
+      free_watch_trans_info: '{"ad_frequency_control_time_list":{}}',
+      ad_exp_ids: "100000+112426914",
+      ams_cookies: "",
+      ad_trans_data: '{"ad_request_id":"lazy-town","game_sessions":[]}',
+      skip_privacy_types: "0",
+      support_click_scan: "1",
+    },
+    page_bypass_params: {
+      params: {
+        platform_id: "2",
+        caller_id: "3000010",
+        data_mode: "default",
+        user_mode: "default",
+        specified_strategy: "",
+        page_type: "channel",
+        page_id: TENCENT_PAGE_ID,
+        scene: "channel",
+        new_mark_label_enabled: "1",
+      },
+      scene: "channel",
+      app_version: "",
+      abtest_bypass_id: guid,
+    },
+    page_context: null,
+  };
+  const page = await fetchJson<TencentPageResponse>(pageUrl, pageBody, TENCENT_MOVIE_URL);
+  const bannerCard = page?.data?.CardList?.find((card) => card.params?.multi_tab?.includes("coming_soon"));
+  if (!bannerCard?.params?.multi_tab || !bannerCard.flip_infos?.change) return null;
+
+  const tabs = JSON.parse(bannerCard.params.multi_tab) as TencentTab[];
+  const comingSoonTab = tabs.find((tab) => tab.tab_type === "coming_soon");
+  if (!comingSoonTab) return null;
+
+  const cardUrl =
+    "https://pbaccess.video.qq.com/trpc.vector_layout.page_view.PageService/getCard?video_appid=3000010&vversion_platform=2";
+  const cardBody = {
+    page_params: {
+      ...comingSoonTab,
+      page_id: "scms_shake",
+      page_type: "scms_shake",
+      source_key: "",
+      data_key: "",
+      channel_id: "",
+      channel_first_class: "",
+      tag_id: "",
+      tag_type: "",
+      new_mark_label_enabled: "1",
+    },
+    page_context: {
+      page_index: "1",
+    },
+    flip_info: bannerCard.flip_infos.change,
+  };
+  const result = await fetchJson<TencentCardResponse>(cardUrl, cardBody, TENCENT_MOVIE_URL);
+  return result?.ret === 0 ? (result.data?.card ?? null) : null;
 }
 
 async function fetchTencentOnlineMovies(): Promise<DraftOnlineMovie[]> {
-  const html = await fetchHtml(TENCENT_MOVIE_URL, "https://v.qq.com/");
-  if (!html) return [];
-
+  const card = await fetchTencentComingSoonCard();
   const rows: DraftOnlineMovie[] = [];
-  const block = extractTencentComingBlock(html);
-  const itemPattern =
-    /{id:"([^"]+)"[\s\S]*?title:"([^"]+)"[\s\S]*?subTitle:"([^"]*)"[\s\S]*?coverPic:"([^"]*)"[\s\S]*?onlineTimeInfo:"([^"]*)"[\s\S]*?orderPersonCount:(\d+)/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = itemPattern.exec(block))) {
-    const [, id, rawTitle, subTitle, coverUrl, onlineTimeInfo, rawReservationCount] = match;
-    const title = normalizeText(rawTitle.replace(/·首播|·热播|·会员免费看/g, ""));
-    const dateSource = onlineTimeInfo || subTitle;
-    const onlineDate = parseOnlineDate(dateSource);
-    const reservationCount = Number.parseInt(rawReservationCount, 10) || 0;
+  for (const item of getTencentChildCards(card)) {
+    const params = item.params ?? {};
+    const title = normalizeText(params.priority_title || params.title || "");
+    const onlineDate = parseOnlineDate(params.online_time || "");
+    const reservationCount = Number.parseInt(params.order_person_count || "", 10) || 0;
 
     if (!title || !onlineDate || reservationCount < RESERVATION_THRESHOLD) continue;
 
     rows.push({
       title,
-      url: `https://v.qq.com/x/cover/${id}.html`,
+      url: `https://v.qq.com/x/cover/${params.cid || item.id}.html`,
       onlineDate,
       platforms: ["腾讯视频"],
       sourceName: "腾讯视频电影",
       status: "上线",
       reservationCount,
-      confidence: 65,
-      coverUrl: normalizeUrl(coverUrl, "https://v.qq.com"),
+      confidence: 85,
+      coverUrl: normalizeUrl(params.priority_image_url || params.image_url || "", "https://v.qq.com"),
     });
   }
 
