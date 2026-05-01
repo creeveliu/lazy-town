@@ -22,7 +22,8 @@ const IQIYI_NEW_ONLINE_URL =
 const TENCENT_MOVIE_URL = "https://v.qq.com/channel/movie";
 const TENCENT_PAGE_ID = "100173";
 const RESERVATION_THRESHOLD = 5000;
-const TBA_RESERVATION_THRESHOLD = 50000;
+const YOUKU_TBA_RESERVATION_THRESHOLD = 50000;
+const TENCENT_TBA_RESERVATION_THRESHOLD = 200000;
 
 function normalizeText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
@@ -136,7 +137,7 @@ async function fetchYoukuOnlineMovies(): Promise<DraftOnlineMovie[]> {
     const onlineDate = parseOnlineDate(status);
     const reservationText = normalizeText(card.find('span[class^="number"], span[class*=" number"]').first().text());
     const reservationCount = parseReservationCount(reservationText || card.text());
-    const minReservationCount = onlineDate ? RESERVATION_THRESHOLD : TBA_RESERVATION_THRESHOLD;
+    const minReservationCount = onlineDate ? RESERVATION_THRESHOLD : YOUKU_TBA_RESERVATION_THRESHOLD;
 
     if (!title || reservationCount < minReservationCount) return;
 
@@ -312,7 +313,7 @@ async function fetchTencentOnlineMovies(): Promise<DraftOnlineMovie[]> {
     const title = normalizeText(params.priority_title || params.title || "");
     const onlineDate = parseOnlineDate(params.online_time || "");
     const reservationCount = Number.parseInt(params.order_person_count || "", 10) || 0;
-    const minReservationCount = onlineDate ? RESERVATION_THRESHOLD : TBA_RESERVATION_THRESHOLD;
+    const minReservationCount = onlineDate ? RESERVATION_THRESHOLD : TENCENT_TBA_RESERVATION_THRESHOLD;
 
     if (!title || reservationCount < minReservationCount) continue;
 
