@@ -23,6 +23,7 @@ const TENCENT_MOVIE_URL = "https://v.qq.com/channel/movie";
 const TENCENT_PAGE_ID = "100173";
 const RESERVATION_THRESHOLD = 5000;
 const YOUKU_TBA_RESERVATION_THRESHOLD = 50000;
+const IQIYI_TBA_RESERVATION_THRESHOLD = 50000;
 const TENCENT_TBA_RESERVATION_THRESHOLD = 200000;
 
 function normalizeText(value: string): string {
@@ -85,6 +86,14 @@ function parseReservationCount(raw: string): number {
   const count = Number.parseFloat(match[1]);
   if (!Number.isFinite(count)) return 0;
   return value.includes("万") ? Math.round(count * 10000) : Math.round(count);
+}
+
+function decodeJsString(value: string): string {
+  try {
+    return JSON.parse(`"${value}"`) as string;
+  } catch {
+    return value.replace(/\\u002F/g, "/").replace(/\\n/g, "\n");
+  }
 }
 
 function isLikelyMovie(title: string, actors = ""): boolean {
@@ -195,6 +204,36 @@ async function fetchIqiyiOnlineMovies(): Promise<DraftOnlineMovie[]> {
       coverUrl: normalizeUrl(link.find("img.i71-img").first().attr("src") ?? "", "https://www.iqiyi.com"),
     });
   });
+
+  const serializedCard =
+    /{name:"((?:\\.|[^"\\])+)"[\s\S]*?cid:([^,}]+)[\s\S]*?pageUrl:"((?:\\.|[^"\\])+)"[\s\S]*?imageUrl:"((?:\\.|[^"\\])*)"[\s\S]*?thumbnail:"((?:\\.|[^"\\])*)"[\s\S]*?publishText:([^,}]+)[\s\S]*?sub:\{[^}]*?count:(\d+)/g;
+  const seenUrls = new Set(rows.map((row) => row.url));
+  let match: RegExpExecArray | null;
+
+  while ((match = serializedCard.exec(html))) {
+    const [, rawTitle, cid, rawUrl, rawImageUrl, rawThumbnail, rawPublishText, rawCount] = match;
+    const title = normalizeText(decodeJsString(rawTitle));
+    const url = normalizeUrl(decodeJsString(rawUrl), "https://www.iqiyi.com");
+    const reservationCount = Number.parseInt(rawCount, 10) || 0;
+    const isTba = rawPublishText === "f";
+
+    if (!title || !url || seenUrls.has(url)) continue;
+    if (cid !== "i" || !isTba || reservationCount < IQIYI_TBA_RESERVATION_THRESHOLD) continue;
+    if (!isLikelyMovie(title)) continue;
+
+    seenUrls.add(url);
+    rows.push({
+      title,
+      url,
+      onlineDate: null,
+      platforms: ["爱奇艺"],
+      sourceName: "爱奇艺新片速递",
+      status: "敬请期待",
+      reservationCount,
+      confidence: 70,
+      coverUrl: normalizeUrl(decodeJsString(rawImageUrl || rawThumbnail), "https://www.iqiyi.com"),
+    });
+  }
 
   return rows;
 }
