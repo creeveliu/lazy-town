@@ -272,6 +272,15 @@ export async function syncGamesToDb(): Promise<SyncResult> {
           AND online_date < (CURRENT_DATE - INTERVAL '14 days')
       `;
 
+      const onlineMovieUrls = onlineMovieResult.map((movie) => movie.url).filter(Boolean);
+      if (onlineMovieUrls.length > 0) {
+        await sql`
+          DELETE FROM online_movies
+          WHERE online_date IS NULL
+            AND source_url <> ALL(${onlineMovieUrls})
+        `;
+      }
+
       for (const game of games) {
         await sql`
           INSERT INTO games (source_url, title, release_date, heat, platforms, cover_url, updated_at)
