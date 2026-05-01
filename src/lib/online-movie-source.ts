@@ -206,7 +206,7 @@ async function fetchIqiyiOnlineMovies(): Promise<DraftOnlineMovie[]> {
   });
 
   const serializedCard =
-    /{name:"((?:\\.|[^"\\])+)"[\s\S]*?cid:([^,}]+)[\s\S]*?pageUrl:"((?:\\.|[^"\\])+)"[\s\S]*?imageUrl:"((?:\\.|[^"\\])*)"[\s\S]*?thumbnail:"((?:\\.|[^"\\])*)"[\s\S]*?publishText:([^,}]+)[\s\S]*?sub:\{[^}]*?count:(\d+)/g;
+    /{name:"((?:\\.|[^"\\])+)"(?:(?!},{name:)[\s\S])*?cid:([^,}]+)(?:(?!},{name:)[\s\S])*?pageUrl:"((?:\\.|[^"\\])+)"(?:(?!},{name:)[\s\S])*?imageUrl:"((?:\\.|[^"\\])*)"(?:(?!},{name:)[\s\S])*?thumbnail:"((?:\\.|[^"\\])*)"(?:(?!},{name:)[\s\S])*?publishText:([^,}]+)(?:(?!},{name:)[\s\S])*?sub:\{[^}]*?count:(\d+)/g;
   const seenUrls = new Set(rows.map((row) => row.url));
   let match: RegExpExecArray | null;
 
