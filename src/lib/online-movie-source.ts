@@ -22,7 +22,7 @@ const IQIYI_NEW_ONLINE_URL =
 const TENCENT_MOVIE_URL = "https://v.qq.com/channel/movie";
 const TENCENT_PAGE_ID = "100173";
 const RESERVATION_THRESHOLD = 5000;
-const TBA_RESERVATION_THRESHOLD = 200000;
+const TBA_RESERVATION_THRESHOLD = 50000;
 
 function normalizeText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
