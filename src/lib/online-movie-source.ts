@@ -25,6 +25,7 @@ const RESERVATION_THRESHOLD = 5000;
 const YOUKU_TBA_RESERVATION_THRESHOLD = 50000;
 const IQIYI_TBA_RESERVATION_THRESHOLD = 50000;
 const TENCENT_TBA_RESERVATION_THRESHOLD = 200000;
+const REQUEST_TIMEOUT_MS = 15000;
 
 function normalizeText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
@@ -103,32 +104,52 @@ function isLikelyMovie(title: string, actors = ""): boolean {
 }
 
 async function fetchHtml(url: string, referer?: string): Promise<string> {
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": USER_AGENT,
-      ...(referer ? { Referer: referer } : {}),
-    },
-    cache: "no-store",
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  if (!response.ok) return "";
-  return response.text();
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": USER_AGENT,
+        ...(referer ? { Referer: referer } : {}),
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) return "";
+    return response.text();
+  } catch {
+    return "";
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function fetchJson<T>(url: string, body: unknown, referer: string): Promise<T | null> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": USER_AGENT,
-      Referer: referer,
-    },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  if (!response.ok) return null;
-  return response.json() as Promise<T>;
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": USER_AGENT,
+        Referer: referer,
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) return null;
+    return response.json() as Promise<T>;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function fetchYoukuOnlineMovies(): Promise<DraftOnlineMovie[]> {
