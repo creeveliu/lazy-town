@@ -281,6 +281,15 @@ export async function syncGamesToDb(): Promise<SyncResult> {
         `;
       }
 
+      for (const movie of onlineMovieResult) {
+        await sql`
+          DELETE FROM online_movies
+          WHERE title = ${movie.title}
+            AND online_date IS NOT DISTINCT FROM ${movie.onlineDate}
+            AND source_url <> ${movie.url}
+        `;
+      }
+
       for (const game of games) {
         await sql`
           INSERT INTO games (source_url, title, release_date, heat, platforms, cover_url, updated_at)
