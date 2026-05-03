@@ -358,6 +358,47 @@ export async function syncGamesToDb(): Promise<SyncResult> {
         `;
       }
 
+      await sql`
+        WITH duplicate_groups AS (
+          SELECT
+            title,
+            online_date,
+            (ARRAY_AGG(id ORDER BY reservation_count DESC, updated_at DESC, id DESC))[1] AS keep_id,
+            ARRAY_AGG(id) AS ids
+          FROM online_movies
+          GROUP BY title, online_date
+          HAVING COUNT(*) > 1
+        ),
+        merged_platforms AS (
+          SELECT
+            duplicate_groups.keep_id,
+            ARRAY_AGG(DISTINCT platform ORDER BY platform) AS platforms
+          FROM duplicate_groups
+          JOIN online_movies ON online_movies.id = ANY(duplicate_groups.ids)
+          CROSS JOIN LATERAL UNNEST(online_movies.platforms) AS platform
+          GROUP BY duplicate_groups.keep_id
+        )
+        UPDATE online_movies
+        SET platforms = merged_platforms.platforms
+        FROM merged_platforms
+        WHERE online_movies.id = merged_platforms.keep_id
+      `;
+
+      await sql`
+        WITH duplicate_groups AS (
+          SELECT
+            (ARRAY_AGG(id ORDER BY reservation_count DESC, updated_at DESC, id DESC))[1] AS keep_id,
+            ARRAY_AGG(id) AS ids
+          FROM online_movies
+          GROUP BY title, online_date
+          HAVING COUNT(*) > 1
+        )
+        DELETE FROM online_movies
+        USING duplicate_groups
+        WHERE online_movies.id = ANY(duplicate_groups.ids)
+          AND online_movies.id <> duplicate_groups.keep_id
+      `;
+
       const durationMs = Date.now() - started;
       await sql`
         INSERT INTO sync_logs (status, synced_count, duration_ms)
