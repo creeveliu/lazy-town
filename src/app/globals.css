@@ -197,11 +197,11 @@ body {
 .tab-bar {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 30;
   display: flex;
   gap: 8px;
   margin-bottom: 12px;
-  padding: 8px 0;
+  padding: 8px 0 12px;
   background: var(--bg);
 }
 
@@ -226,6 +226,53 @@ body {
   color: var(--text);
   font-weight: 600;
   background: #eef0f5;
+}
+
+.tab-button-with-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.inline-switch {
+  position: relative;
+  display: inline-flex;
+  gap: 1px;
+  padding: 1px;
+  border-radius: 6px;
+  background: #e4e8ef;
+}
+
+.inline-switch-thumb {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  left: 1px;
+  width: calc(50% - 1.5px);
+  border-radius: 5px;
+  background: #f7f8fa;
+  transition: transform 0.18s ease;
+}
+
+.inline-switch.switch-global .inline-switch-thumb {
+  transform: translateX(calc(100% + 1px));
+}
+
+.inline-switch-option {
+  position: relative;
+  z-index: 1;
+  padding: 1px 5px;
+  border-radius: 5px;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  transition: color 0.18s ease;
+}
+
+.inline-switch-option:hover,
+.inline-switch-option.active {
+  color: var(--text);
 }
 
 .game-table {

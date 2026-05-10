@@ -48,7 +48,8 @@ function globalPopularityTag(popularity: number, imdbVotes: number): { label: st
 
 export default function TabbedContent({ games, movies, onlineMovies, globalOnlineMovies, dbError, syncInfo }: TabbedContentProps) {
   const currentYear = new Date().getFullYear();
-  const [activeTab, setActiveTab] = useState<"games" | "movies" | "onlineMovies" | "globalOnlineMovies">("games");
+  const [activeTab, setActiveTab] = useState<"games" | "movies" | "onlineMovies">("games");
+  const [onlineRegion, setOnlineRegion] = useState<"domestic" | "global">("domestic");
   const [showCalendar, setShowCalendar] = useState(false);
 
   const handleSubscribe = (path: string) => {
@@ -262,18 +263,51 @@ export default function TabbedContent({ games, movies, onlineMovies, globalOnlin
         <button
           role="tab"
           aria-selected={activeTab === "onlineMovies"}
-          className={`tab-button ${activeTab === "onlineMovies" ? "active" : ""}`}
+          className={`tab-button tab-button-with-switch ${activeTab === "onlineMovies" ? "active" : ""}`}
           onClick={() => setActiveTab("onlineMovies")}
         >
-          在线电影
-        </button>
-        <button
-          role="tab"
-          aria-selected={activeTab === "globalOnlineMovies"}
-          className={`tab-button ${activeTab === "globalOnlineMovies" ? "active" : ""}`}
-          onClick={() => setActiveTab("globalOnlineMovies")}
-        >
-          海外流媒体
+          <span>在线电影</span>
+          {activeTab === "onlineMovies" ? (
+            <span className={`inline-switch switch-${onlineRegion}`} aria-label="在线电影地区">
+              <span className="inline-switch-thumb" aria-hidden="true" />
+              <span
+                role="button"
+                tabIndex={0}
+                className={`inline-switch-option ${onlineRegion === "domestic" ? "active" : ""}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOnlineRegion("domestic");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setOnlineRegion("domestic");
+                  }
+                }}
+              >
+                国内
+              </span>
+              <span
+                role="button"
+                tabIndex={0}
+                className={`inline-switch-option ${onlineRegion === "global" ? "active" : ""}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOnlineRegion("global");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setOnlineRegion("global");
+                  }
+                }}
+              >
+                海外
+              </span>
+            </span>
+          ) : null}
         </button>
       </nav>
 
@@ -339,32 +373,15 @@ export default function TabbedContent({ games, movies, onlineMovies, globalOnlin
             </tr>
           </thead>
           <tbody>
-            {onlineMovies.length === 0 ? (
+            {onlineRegion === "domestic" && onlineMovies.length === 0 ? (
               <tr>
                 <td colSpan={5} className="empty">
                   {emptyMessage("在线电影")}
                 </td>
               </tr>
-            ) : (
+            ) : onlineRegion === "domestic" ? (
               onlineMovieRows
-            )}
-          </tbody>
-        </table>
-      </section>
-
-      <section className="table-wrap tab-panel" hidden={activeTab !== "globalOnlineMovies"}>
-        <table className="game-table">
-          <thead>
-            <tr>
-              <th>封面</th>
-              <th>上线日</th>
-              <th>片名</th>
-              <th>平台</th>
-              <th>热度</th>
-            </tr>
-          </thead>
-          <tbody>
-            {globalOnlineMovies.length === 0 ? (
+            ) : globalOnlineMovies.length === 0 ? (
               <tr>
                 <td colSpan={5} className="empty">
                   {emptyMessage("海外流媒体")}
