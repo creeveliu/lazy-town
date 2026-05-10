@@ -117,6 +117,7 @@ const SUPPORTED_PLATFORMS = new Set([
   "Hulu",
 ]);
 const MIN_TMDB_POPULARITY = 10;
+const MIN_UPCOMING_TMDB_POPULARITY = 2;
 const MIN_IMDB_VOTES = 1000;
 const MIN_APPLE_TV_FALLBACK_POPULARITY = 80;
 const RECENT_RELEASE_YEAR_WINDOW = 2;
@@ -406,6 +407,10 @@ function shouldKeepMovie(popularity: number, imdbVotes: number, tmdbScore: numbe
   return popularity >= MIN_TMDB_POPULARITY || imdbVotes >= MIN_IMDB_VOTES;
 }
 
+function shouldKeepUpcomingMovie(popularity: number, hasChineseTitle: boolean): boolean {
+  return hasChineseTitle && popularity >= MIN_UPCOMING_TMDB_POPULARITY;
+}
+
 function shouldKeepForChineseAudience(hasChineseTitle: boolean, popularity: number): boolean {
   return hasChineseTitle || popularity >= 20;
 }
@@ -491,10 +496,10 @@ export async function fetchGlobalOnlineMovies(): Promise<GlobalOnlineMovieItem[]
         const scoring = content.scoring ?? {};
         const popularity = scoring.tmdbPopularity ?? 0;
         const imdbVotes = scoring.imdbVotes ?? 0;
-        if (!shouldKeepMovie(popularity, imdbVotes, scoring.tmdbScore)) continue;
 
         const platforms = Array.from(new Set(releases.map((release) => release.package?.clearName ?? "").filter(Boolean)));
         const tmdb = await fetchTmdbMovieMetadata(content.title, onlineDate);
+        if (!shouldKeepUpcomingMovie(popularity, tmdb.hasChineseTitle)) continue;
         if (!shouldKeepForChineseAudience(tmdb.hasChineseTitle, popularity)) continue;
         const item = {
           title: tmdb.title || content.title,
