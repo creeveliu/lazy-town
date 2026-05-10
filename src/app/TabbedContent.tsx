@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { GameItem } from "@/lib/game-source";
+import type { GlobalOnlineMovieItem } from "@/lib/global-online-movie-source";
 import type { MovieItem } from "@/lib/movie-source";
 import type { OnlineMovieItem } from "@/lib/online-movie-source";
 
@@ -9,6 +10,7 @@ type TabbedContentProps = {
   games: GameItem[];
   movies: MovieItem[];
   onlineMovies: OnlineMovieItem[];
+  globalOnlineMovies: GlobalOnlineMovieItem[];
   dbError: string;
   syncInfo: { status: string; createdAt: string } | null;
 };
@@ -38,9 +40,15 @@ function onlineReservationTag(count: number): { label: string; level: "low" | "m
   return { label: "普通", level: "low" };
 }
 
-export default function TabbedContent({ games, movies, onlineMovies, dbError, syncInfo }: TabbedContentProps) {
+function globalPopularityTag(popularity: number, imdbVotes: number): { label: string; level: "low" | "mid" | "high" } {
+  if (popularity >= 8 || imdbVotes >= 10000) return { label: "爆款", level: "high" };
+  if (popularity >= 4 || imdbVotes >= 3000) return { label: "热门", level: "mid" };
+  return { label: "普通", level: "low" };
+}
+
+export default function TabbedContent({ games, movies, onlineMovies, globalOnlineMovies, dbError, syncInfo }: TabbedContentProps) {
   const currentYear = new Date().getFullYear();
-  const [activeTab, setActiveTab] = useState<"games" | "movies" | "onlineMovies">("games");
+  const [activeTab, setActiveTab] = useState<"games" | "movies" | "onlineMovies" | "globalOnlineMovies">("games");
   const [showCalendar, setShowCalendar] = useState(false);
 
   const handleSubscribe = (path: string) => {
@@ -106,7 +114,7 @@ export default function TabbedContent({ games, movies, onlineMovies, dbError, sy
         <td>
           {movie.coverUrl ? (
             <img
-              className="cover"
+              className="cover global-cover"
               src={proxiedImageUrl(movie.coverUrl, movie.url)}
               alt={movie.title}
               width={54}
@@ -167,6 +175,59 @@ export default function TabbedContent({ games, movies, onlineMovies, dbError, sy
     );
   });
 
+  const globalOnlineMovieRows = globalOnlineMovies.flatMap((movie, index) => {
+    const tag = globalPopularityTag(movie.popularity, movie.imdbVotes);
+    const year = Number.parseInt(movie.onlineDate.slice(0, 4), 10);
+    const monthDay = movie.onlineDate.slice(5);
+    const title = movie.title === movie.originalTitle ? movie.title : `${movie.title} / ${movie.originalTitle}`;
+    const previousYear =
+      index > 0 ? Number.parseInt(globalOnlineMovies[index - 1].onlineDate.slice(0, 4), 10) : currentYear;
+    const shouldShowYearHeader = year !== currentYear && year !== previousYear;
+    const rows: React.ReactNode[] = [];
+
+    if (shouldShowYearHeader) {
+      rows.push(
+        <tr key={`global-year-${year}`} className="year-divider-row">
+          <td colSpan={5} className="year-divider">
+            {year}
+          </td>
+        </tr>,
+      );
+    }
+
+    rows.push(
+      <tr key={movie.url}>
+        <td>
+          {movie.coverUrl ? (
+            <img
+              className="cover"
+              src={proxiedImageUrl(movie.coverUrl, movie.url)}
+              alt={movie.title}
+              width={54}
+              height={76}
+              loading="lazy"
+            />
+          ) : (
+            <div className="cover cover-placeholder">无图</div>
+          )}
+        </td>
+        <td className="mono">{monthDay}</td>
+        <td className="title-cell">
+          <a href={movie.url} target="_blank" rel="noreferrer" className="title-link">
+            {title}
+          </a>
+          {movie.tmdbScore ? <span className="score-badge">TMDB {movie.tmdbScore.toFixed(1)}</span> : null}
+        </td>
+        <td>{movie.platforms.join(" / ")}</td>
+        <td>
+          <span className={`heat-tag heat-${tag.level}`}>{tag.label}</span>
+        </td>
+      </tr>,
+    );
+
+    return rows;
+  });
+
   const emptyMessage = (type: string) =>
     dbError
       ? `数据库不可用：${dbError}`
@@ -205,6 +266,14 @@ export default function TabbedContent({ games, movies, onlineMovies, dbError, sy
           onClick={() => setActiveTab("onlineMovies")}
         >
           在线电影
+        </button>
+        <button
+          role="tab"
+          aria-selected={activeTab === "globalOnlineMovies"}
+          className={`tab-button ${activeTab === "globalOnlineMovies" ? "active" : ""}`}
+          onClick={() => setActiveTab("globalOnlineMovies")}
+        >
+          海外流媒体
         </button>
       </nav>
 
@@ -278,6 +347,31 @@ export default function TabbedContent({ games, movies, onlineMovies, dbError, sy
               </tr>
             ) : (
               onlineMovieRows
+            )}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="table-wrap tab-panel" hidden={activeTab !== "globalOnlineMovies"}>
+        <table className="game-table">
+          <thead>
+            <tr>
+              <th>封面</th>
+              <th>上线日</th>
+              <th>片名</th>
+              <th>平台</th>
+              <th>热度</th>
+            </tr>
+          </thead>
+          <tbody>
+            {globalOnlineMovies.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="empty">
+                  {emptyMessage("海外流媒体")}
+                </td>
+              </tr>
+            ) : (
+              globalOnlineMovieRows
             )}
           </tbody>
         </table>
@@ -366,6 +460,28 @@ export default function TabbedContent({ games, movies, onlineMovies, dbError, sy
                 <span className="modal-link-text">
                   <span className="modal-link-title">在线电影上线表</span>
                   <span className="modal-link-hint">爱奇艺 / 腾讯视频 / 优酷</span>
+                </span>
+              </a>
+
+              <a
+                className="modal-link"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSubscribe("/api/calendar/global-online-movies");
+                }}
+              >
+                <span className="modal-link-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M2 12h20" />
+                    <path d="M12 2a15.3 15.3 0 0 1 0 20" />
+                    <path d="M12 2a15.3 15.3 0 0 0 0 20" />
+                  </svg>
+                </span>
+                <span className="modal-link-text">
+                  <span className="modal-link-title">海外流媒体上线表</span>
+                  <span className="modal-link-hint">Netflix / Apple TV / Prime Video</span>
                 </span>
               </a>
             </div>

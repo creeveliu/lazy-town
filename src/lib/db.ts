@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { fetchHotUpcomingGames, type GameItem } from "@/lib/game-source";
+import { fetchGlobalOnlineMovies, type GlobalOnlineMovieItem } from "@/lib/global-online-movie-source";
 import { fetchUpcomingMovies, type MovieItem } from "@/lib/movie-source";
 import { fetchOnlineMovies, type OnlineMovieItem } from "@/lib/online-movie-source";
 
@@ -34,10 +35,25 @@ type DbOnlineMovieRow = {
   cover_url: string;
 };
 
+type DbGlobalOnlineMovieRow = {
+  title: string;
+  original_title: string;
+  source_url: string;
+  online_date: string;
+  platforms: string[];
+  source_name: string;
+  popularity: number;
+  imdb_votes: number;
+  imdb_score: number | null;
+  tmdb_score: number | null;
+  cover_url: string;
+};
+
 export type SyncResult = {
   syncedCount: number;
   movieSyncedCount: number;
   onlineMovieSyncedCount: number;
+  globalOnlineMovieSyncedCount: number;
   durationMs: number;
 };
 
@@ -124,6 +140,32 @@ export async function ensureSchema() {
 
   await sql`
     CREATE INDEX IF NOT EXISTS idx_online_movies_online_date ON online_movies (online_date)
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS global_online_movies (
+      id BIGSERIAL PRIMARY KEY,
+      source_url TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      original_title TEXT NOT NULL DEFAULT '',
+      online_date DATE NOT NULL,
+      platforms TEXT[] NOT NULL,
+      source_name TEXT NOT NULL DEFAULT '',
+      popularity REAL NOT NULL DEFAULT 0,
+      imdb_votes INTEGER NOT NULL DEFAULT 0,
+      imdb_score REAL,
+      tmdb_score REAL,
+      cover_url TEXT NOT NULL DEFAULT '',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  await sql`
+    ALTER TABLE global_online_movies ADD COLUMN IF NOT EXISTS tmdb_score REAL
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_global_online_movies_online_date ON global_online_movies (online_date)
   `;
 
   schemaReady = true;
@@ -243,6 +285,44 @@ export async function getOnlineMoviesFromDb(): Promise<OnlineMovieItem[]> {
   }));
 }
 
+export async function getGlobalOnlineMoviesFromDb(): Promise<GlobalOnlineMovieItem[]> {
+  await ensureSchema();
+  const sql = getSql();
+
+  const rows = (await sql`
+    SELECT
+      title,
+      original_title,
+      source_url,
+      online_date::text AS online_date,
+      platforms,
+      source_name,
+      popularity,
+      imdb_votes,
+      imdb_score,
+      tmdb_score,
+      cover_url
+    FROM global_online_movies
+    WHERE online_date >= (CURRENT_DATE - INTERVAL '14 days')
+      AND online_date <= (CURRENT_DATE + INTERVAL '365 days')
+    ORDER BY online_date ASC, popularity DESC
+  `) as DbGlobalOnlineMovieRow[];
+
+  return rows.map((row) => ({
+    title: row.title,
+    originalTitle: row.original_title,
+    url: row.source_url,
+    onlineDate: row.online_date,
+    platforms: row.platforms ?? [],
+    sourceName: row.source_name,
+    popularity: row.popularity,
+    imdbVotes: row.imdb_votes,
+    imdbScore: row.imdb_score,
+    tmdbScore: row.tmdb_score,
+    coverUrl: row.cover_url,
+  }));
+}
+
 export async function syncGamesToDb(): Promise<SyncResult> {
   await ensureSchema();
   const sql = getSql();
@@ -250,10 +330,11 @@ export async function syncGamesToDb(): Promise<SyncResult> {
   const started = Date.now();
 
   try {
-    const [games, movies, onlineMovieResult] = await Promise.all([
+    const [games, movies, onlineMovieResult, globalOnlineMovieResult] = await Promise.all([
       fetchHotUpcomingGames(),
       fetchUpcomingMovies(),
       fetchOnlineMovies().catch(() => [] as OnlineMovieItem[]),
+      fetchGlobalOnlineMovies().catch(() => [] as GlobalOnlineMovieItem[]),
     ]);
 
     await sql`BEGIN`;
@@ -271,6 +352,10 @@ export async function syncGamesToDb(): Promise<SyncResult> {
         WHERE online_date IS NOT NULL
           AND online_date < (CURRENT_DATE - INTERVAL '14 days')
       `;
+      await sql`
+        DELETE FROM global_online_movies
+        WHERE online_date < (CURRENT_DATE - INTERVAL '14 days')
+      `;
 
       const onlineMovieUrls = onlineMovieResult.map((movie) => movie.url).filter(Boolean);
       if (onlineMovieUrls.length > 0) {
@@ -281,12 +366,65 @@ export async function syncGamesToDb(): Promise<SyncResult> {
         `;
       }
 
+      const globalOnlineMovieUrls = globalOnlineMovieResult.map((movie) => movie.url).filter(Boolean);
+      if (globalOnlineMovieUrls.length > 0) {
+        await sql`
+          DELETE FROM global_online_movies
+          WHERE source_url <> ALL(${globalOnlineMovieUrls})
+        `;
+      }
+
       for (const movie of onlineMovieResult) {
         await sql`
           DELETE FROM online_movies
           WHERE title = ${movie.title}
             AND online_date IS NOT DISTINCT FROM ${movie.onlineDate}
             AND source_url <> ${movie.url}
+        `;
+      }
+
+      for (const movie of globalOnlineMovieResult) {
+        await sql`
+          INSERT INTO global_online_movies (
+            source_url,
+            title,
+            original_title,
+            online_date,
+            platforms,
+            source_name,
+            popularity,
+            imdb_votes,
+            imdb_score,
+            tmdb_score,
+            cover_url,
+            updated_at
+          )
+          VALUES (
+            ${movie.url},
+            ${movie.title},
+            ${movie.originalTitle},
+            ${movie.onlineDate},
+            ${movie.platforms},
+            ${movie.sourceName},
+            ${movie.popularity},
+            ${movie.imdbVotes},
+            ${movie.imdbScore},
+            ${movie.tmdbScore},
+            ${movie.coverUrl || ""},
+            NOW()
+          )
+          ON CONFLICT (source_url) DO UPDATE SET
+            title = EXCLUDED.title,
+            original_title = EXCLUDED.original_title,
+            online_date = EXCLUDED.online_date,
+            platforms = EXCLUDED.platforms,
+            source_name = EXCLUDED.source_name,
+            popularity = EXCLUDED.popularity,
+            imdb_votes = EXCLUDED.imdb_votes,
+            imdb_score = EXCLUDED.imdb_score,
+            tmdb_score = EXCLUDED.tmdb_score,
+            cover_url = EXCLUDED.cover_url,
+            updated_at = NOW()
         `;
       }
 
@@ -402,7 +540,7 @@ export async function syncGamesToDb(): Promise<SyncResult> {
       const durationMs = Date.now() - started;
       await sql`
         INSERT INTO sync_logs (status, synced_count, duration_ms)
-        VALUES ('ok', ${games.length + movies.length + onlineMovieResult.length}, ${durationMs})
+        VALUES ('ok', ${games.length + movies.length + onlineMovieResult.length + globalOnlineMovieResult.length}, ${durationMs})
       `;
 
       await sql`COMMIT`;
@@ -410,6 +548,7 @@ export async function syncGamesToDb(): Promise<SyncResult> {
         syncedCount: games.length,
         movieSyncedCount: movies.length,
         onlineMovieSyncedCount: onlineMovieResult.length,
+        globalOnlineMovieSyncedCount: globalOnlineMovieResult.length,
         durationMs,
       };
     } catch (error) {

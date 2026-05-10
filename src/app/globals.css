@@ -266,6 +266,11 @@ body {
   height: 54px;
 }
 
+.global-cover {
+  object-fit: cover;
+  background: #eef0f5;
+}
+
 .cover-placeholder {
   display: grid;
   place-items: center;
@@ -289,6 +294,20 @@ body {
 
 .title-link:hover {
   text-decoration: underline;
+}
+
+.score-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid #d7dde7;
+  border-radius: 999px;
+  color: var(--muted);
+  background: #f7f8fa;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  vertical-align: 1px;
 }
 
 .heat-tag {

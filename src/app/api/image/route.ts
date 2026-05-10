@@ -30,6 +30,7 @@ const ALLOWED_HOSTS = new Set([
   "vmmp.qpic.cn",
   "vcover-hz-pic.puui.qpic.cn",
   "gif.media.qpic.cn",
+  "images.justwatch.com",
 ]);
 
 function isAllowed(url: URL): boolean {
@@ -56,6 +57,10 @@ function buildReferer(target: URL, rawRef: string): string {
 
   if (target.hostname === "image.tmdb.org") {
     return "https://www.themoviedb.org/";
+  }
+
+  if (target.hostname === "images.justwatch.com") {
+    return "https://www.justwatch.com/";
   }
 
   if (target.hostname.endsWith("alicdn.com") || target.hostname.endsWith("ykimg.com")) {

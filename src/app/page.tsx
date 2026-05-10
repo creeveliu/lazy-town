@@ -1,5 +1,6 @@
-import { getGamesFromDb, getLatestSyncInfo, getMoviesFromDb, getOnlineMoviesFromDb } from "@/lib/db";
+import { getGamesFromDb, getGlobalOnlineMoviesFromDb, getLatestSyncInfo, getMoviesFromDb, getOnlineMoviesFromDb } from "@/lib/db";
 import type { GameItem } from "@/lib/game-source";
+import type { GlobalOnlineMovieItem } from "@/lib/global-online-movie-source";
 import type { MovieItem } from "@/lib/movie-source";
 import type { OnlineMovieItem } from "@/lib/online-movie-source";
 import TabbedContent from "./TabbedContent";
@@ -10,14 +11,16 @@ export default async function Home() {
   let games: GameItem[] = [];
   let movies: MovieItem[] = [];
   let onlineMovies: OnlineMovieItem[] = [];
+  let globalOnlineMovies: GlobalOnlineMovieItem[] = [];
   let syncInfo: { status: string; createdAt: string } | null = null;
   let dbError = "";
 
   try {
-    [games, movies, onlineMovies, syncInfo] = await Promise.all([
+    [games, movies, onlineMovies, globalOnlineMovies, syncInfo] = await Promise.all([
       getGamesFromDb(),
       getMoviesFromDb(),
       getOnlineMoviesFromDb(),
+      getGlobalOnlineMoviesFromDb(),
       getLatestSyncInfo(),
     ]);
   } catch (error) {
@@ -26,7 +29,14 @@ export default async function Home() {
 
   return (
     <main className="container">
-      <TabbedContent games={games} movies={movies} onlineMovies={onlineMovies} dbError={dbError} syncInfo={syncInfo} />
+      <TabbedContent
+        games={games}
+        movies={movies}
+        onlineMovies={onlineMovies}
+        globalOnlineMovies={globalOnlineMovies}
+        dbError={dbError}
+        syncInfo={syncInfo}
+      />
     </main>
   );
 }
