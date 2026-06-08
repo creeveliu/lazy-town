@@ -31,6 +31,9 @@ const ALLOWED_HOSTS = new Set([
   "vcover-hz-pic.puui.qpic.cn",
   "gif.media.qpic.cn",
   "images.justwatch.com",
+  "i0.hdslb.com",
+  "i1.hdslb.com",
+  "i2.hdslb.com",
 ]);
 
 function isAllowed(url: URL): boolean {
@@ -73,6 +76,10 @@ function buildReferer(target: URL, rawRef: string): string {
 
   if (target.hostname.endsWith("qpic.cn")) {
     return "https://v.qq.com/";
+  }
+
+  if (target.hostname.endsWith("hdslb.com")) {
+    return "https://www.bilibili.com/";
   }
 
   return `${SOURCE_WEB}/`;
