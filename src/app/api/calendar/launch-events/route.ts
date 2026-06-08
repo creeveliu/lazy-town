@@ -15,6 +15,16 @@ function formatICSDateNext(dateStr: string): string {
   return d.toISOString().slice(0, 10).replace(/-/g, "");
 }
 
+function formatICSDateTime(dateTimeStr: string): string {
+  return new Date(dateTimeStr).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
+function formatICSDateTimeEnd(dateTimeStr: string): string {
+  const d = new Date(dateTimeStr);
+  d.setHours(d.getHours() + 2);
+  return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
 export async function GET() {
   const events = await getLaunchEventsFromDb();
 
@@ -33,8 +43,13 @@ export async function GET() {
 
     lines.push("BEGIN:VEVENT");
     lines.push(`UID:${uid}`);
-    lines.push(`DTSTART;VALUE=DATE:${formatICSDate(event.date)}`);
-    lines.push(`DTEND;VALUE=DATE:${formatICSDateNext(event.date)}`);
+    if (event.startTime) {
+      lines.push(`DTSTART:${formatICSDateTime(event.startTime)}`);
+      lines.push(`DTEND:${formatICSDateTimeEnd(event.startTime)}`);
+    } else {
+      lines.push(`DTSTART;VALUE=DATE:${formatICSDate(event.date)}`);
+      lines.push(`DTEND;VALUE=DATE:${formatICSDateNext(event.date)}`);
+    }
     lines.push(`SUMMARY:${escapeText(event.title)}`);
     lines.push(`DESCRIPTION:${description}`);
     lines.push(`URL:${event.url}`);

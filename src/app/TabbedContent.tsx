@@ -48,6 +48,19 @@ function globalPopularityTag(popularity: number, imdbVotes: number): { label: st
   return { label: "普通", level: "low" };
 }
 
+function launchTimeLabel(event: LaunchEventItem): string {
+  if (!event.startTime) return event.date.slice(5);
+
+  return new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(event.startTime));
+}
+
 type ActiveTab = "games" | "movies" | "onlineMovies" | "launchEvents";
 
 export default function TabbedContent({
@@ -243,11 +256,11 @@ export default function TabbedContent({
 
   const launchEventRows = launchEvents.map((event) => {
     const tag = heatTag(event.heat);
-    const monthDay = event.date.slice(5);
+    const timeLabel = launchTimeLabel(event);
 
     return (
       <tr key={event.url}>
-        <td className="mono">{monthDay}</td>
+        <td className="mono">{timeLabel}</td>
         <td className="title-cell">
           <a href={event.url} target="_blank" rel="noreferrer" className="title-link">
             {event.title}
@@ -438,7 +451,7 @@ export default function TabbedContent({
         <table className="game-table launch-table">
           <thead>
             <tr>
-              <th>日期</th>
+              <th>北京时间</th>
               <th>发布会</th>
               <th>平台</th>
               <th>热度</th>

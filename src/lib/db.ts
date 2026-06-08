@@ -54,6 +54,7 @@ type DbLaunchEventRow = {
   title: string;
   source_url: string;
   event_date: string;
+  start_time: string | null;
   platform: string;
   heat: number;
 };
@@ -184,10 +185,15 @@ export async function ensureSchema() {
       source_url TEXT NOT NULL UNIQUE,
       title TEXT NOT NULL,
       event_date DATE NOT NULL,
+      start_time TIMESTAMPTZ,
       platform TEXT NOT NULL DEFAULT '',
       heat INTEGER NOT NULL DEFAULT 0,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+
+  await sql`
+    ALTER TABLE launch_events ADD COLUMN IF NOT EXISTS start_time TIMESTAMPTZ
   `;
 
   await sql`
@@ -358,18 +364,20 @@ export async function getLaunchEventsFromDb(): Promise<LaunchEventItem[]> {
       title,
       source_url,
       event_date::text AS event_date,
+      start_time::text AS start_time,
       platform,
       heat
     FROM launch_events
     WHERE event_date >= (CURRENT_DATE - INTERVAL '14 days')
       AND event_date <= (CURRENT_DATE + INTERVAL '365 days')
-    ORDER BY event_date ASC, heat DESC
+    ORDER BY start_time ASC NULLS LAST, event_date ASC, heat DESC
   `) as DbLaunchEventRow[];
 
   return rows.map((row) => ({
     title: row.title,
     url: row.source_url,
     date: row.event_date,
+    startTime: row.start_time ?? undefined,
     platform: row.platform,
     heat: row.heat,
   }));
@@ -441,11 +449,12 @@ export async function syncGamesToDb(): Promise<SyncResult> {
 
       for (const event of launchEvents) {
         await sql`
-          INSERT INTO launch_events (source_url, title, event_date, platform, heat, updated_at)
-          VALUES (${event.url}, ${event.title}, ${event.date}, ${event.platform}, ${event.heat}, NOW())
+          INSERT INTO launch_events (source_url, title, event_date, start_time, platform, heat, updated_at)
+          VALUES (${event.url}, ${event.title}, ${event.date}, ${event.startTime ?? null}, ${event.platform}, ${event.heat}, NOW())
           ON CONFLICT (source_url) DO UPDATE SET
             title = EXCLUDED.title,
             event_date = EXCLUDED.event_date,
+            start_time = EXCLUDED.start_time,
             platform = EXCLUDED.platform,
             heat = EXCLUDED.heat,
             updated_at = NOW()

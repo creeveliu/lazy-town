@@ -3,6 +3,7 @@ import launchesData from "@/data/launches.json";
 export type LaunchEventItem = {
   title: string;
   date: string;
+  startTime?: string;
   platform: string;
   url: string;
   heat: number;
@@ -15,8 +16,8 @@ export function fetchLaunchEvents(): LaunchEventItem[] {
 
   return (launchesData as LaunchEventItem[])
     .filter((item) => {
-      const eventDate = new Date(item.date);
+      const eventDate = new Date(item.startTime ?? item.date);
       return eventDate >= twoWeeksAgo && eventDate <= oneYearLater;
     })
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a, b) => (a.startTime ?? a.date).localeCompare(b.startTime ?? b.date));
 }
