@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { GameItem } from "@/lib/game-source";
 import type { GlobalOnlineMovieItem } from "@/lib/global-online-movie-source";
+import type { LaunchEventItem } from "@/lib/launch-source";
 import type { MovieItem } from "@/lib/movie-source";
 import type { OnlineMovieItem } from "@/lib/online-movie-source";
 
@@ -11,6 +12,7 @@ type TabbedContentProps = {
   movies: MovieItem[];
   onlineMovies: OnlineMovieItem[];
   globalOnlineMovies: GlobalOnlineMovieItem[];
+  launchEvents: LaunchEventItem[];
   dbError: string;
   syncInfo: { status: string; createdAt: string } | null;
 };
@@ -46,9 +48,19 @@ function globalPopularityTag(popularity: number, imdbVotes: number): { label: st
   return { label: "普通", level: "low" };
 }
 
-export default function TabbedContent({ games, movies, onlineMovies, globalOnlineMovies, dbError, syncInfo }: TabbedContentProps) {
+type ActiveTab = "games" | "movies" | "onlineMovies" | "launchEvents";
+
+export default function TabbedContent({
+  games,
+  movies,
+  onlineMovies,
+  globalOnlineMovies,
+  launchEvents,
+  dbError,
+  syncInfo,
+}: TabbedContentProps) {
   const currentYear = new Date().getFullYear();
-  const [activeTab, setActiveTab] = useState<"games" | "movies" | "onlineMovies">("games");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("games");
   const [onlineRegion, setOnlineRegion] = useState<"domestic" | "global">("domestic");
   const [showCalendar, setShowCalendar] = useState(false);
 
@@ -229,6 +241,26 @@ export default function TabbedContent({ games, movies, onlineMovies, globalOnlin
     return rows;
   });
 
+  const launchEventRows = launchEvents.map((event) => {
+    const tag = heatTag(event.heat);
+    const monthDay = event.date.slice(5);
+
+    return (
+      <tr key={event.url}>
+        <td className="mono">{monthDay}</td>
+        <td className="title-cell">
+          <a href={event.url} target="_blank" rel="noreferrer" className="title-link">
+            {event.title}
+          </a>
+        </td>
+        <td>{event.platform}</td>
+        <td>
+          <span className={`heat-tag heat-${tag.level}`}>{tag.label}</span>
+        </td>
+      </tr>
+    );
+  });
+
   const emptyMessage = (type: string) =>
     dbError
       ? `数据库不可用：${dbError}`
@@ -308,6 +340,14 @@ export default function TabbedContent({ games, movies, onlineMovies, globalOnlin
               </span>
             </span>
           ) : null}
+        </button>
+        <button
+          role="tab"
+          aria-selected={activeTab === "launchEvents"}
+          className={`tab-button ${activeTab === "launchEvents" ? "active" : ""}`}
+          onClick={() => setActiveTab("launchEvents")}
+        >
+          发布会
         </button>
       </nav>
 
@@ -389,6 +429,30 @@ export default function TabbedContent({ games, movies, onlineMovies, globalOnlin
               </tr>
             ) : (
               globalOnlineMovieRows
+            )}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="table-wrap tab-panel" hidden={activeTab !== "launchEvents"}>
+        <table className="game-table launch-table">
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>发布会</th>
+              <th>平台</th>
+              <th>热度</th>
+            </tr>
+          </thead>
+          <tbody>
+            {launchEvents.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="empty">
+                  {emptyMessage("发布会")}
+                </td>
+              </tr>
+            ) : (
+              launchEventRows
             )}
           </tbody>
         </table>
@@ -499,6 +563,31 @@ export default function TabbedContent({ games, movies, onlineMovies, globalOnlin
                 <span className="modal-link-text">
                   <span className="modal-link-title">海外流媒体上线表</span>
                   <span className="modal-link-hint">Netflix / Apple TV / Prime Video</span>
+                </span>
+              </a>
+
+              <a
+                className="modal-link"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSubscribe("/api/calendar/launch-events");
+                }}
+              >
+                <span className="modal-link-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 7h16" />
+                    <path d="M7 4v6" />
+                    <path d="M17 4v6" />
+                    <rect width="18" height="16" x="3" y="5" rx="2" />
+                    <path d="M8 14h.01" />
+                    <path d="M12 14h.01" />
+                    <path d="M16 14h.01" />
+                  </svg>
+                </span>
+                <span className="modal-link-text">
+                  <span className="modal-link-title">发布会日历</span>
+                  <span className="modal-link-hint">Apple / NVIDIA / Nintendo</span>
                 </span>
               </a>
             </div>
