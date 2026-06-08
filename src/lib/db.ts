@@ -1,7 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { fetchHotUpcomingGames, type GameItem } from "@/lib/game-source";
 import { fetchGlobalOnlineMovies, type GlobalOnlineMovieItem } from "@/lib/global-online-movie-source";
-import { fetchLaunchEvents, type LaunchEventItem } from "@/lib/launch-source";
 import { fetchUpcomingMovies, type MovieItem } from "@/lib/movie-source";
 import { fetchOnlineMovies, type OnlineMovieItem } from "@/lib/online-movie-source";
 
@@ -50,20 +49,11 @@ type DbGlobalOnlineMovieRow = {
   cover_url: string;
 };
 
-type DbLaunchEventRow = {
-  title: string;
-  source_url: string;
-  event_date: string;
-  platform: string;
-  heat: number;
-};
-
 export type SyncResult = {
   syncedCount: number;
   movieSyncedCount: number;
   onlineMovieSyncedCount: number;
   globalOnlineMovieSyncedCount: number;
-  launchEventSyncedCount: number;
   durationMs: number;
 };
 
@@ -176,22 +166,6 @@ export async function ensureSchema() {
 
   await sql`
     CREATE INDEX IF NOT EXISTS idx_global_online_movies_online_date ON global_online_movies (online_date)
-  `;
-
-  await sql`
-    CREATE TABLE IF NOT EXISTS launch_events (
-      id BIGSERIAL PRIMARY KEY,
-      source_url TEXT NOT NULL UNIQUE,
-      title TEXT NOT NULL,
-      event_date DATE NOT NULL,
-      platform TEXT NOT NULL DEFAULT '',
-      heat INTEGER NOT NULL DEFAULT 0,
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `;
-
-  await sql`
-    CREATE INDEX IF NOT EXISTS idx_launch_events_event_date ON launch_events (event_date)
   `;
 
   schemaReady = true;
@@ -349,32 +323,6 @@ export async function getGlobalOnlineMoviesFromDb(): Promise<GlobalOnlineMovieIt
   }));
 }
 
-export async function getLaunchEventsFromDb(): Promise<LaunchEventItem[]> {
-  await ensureSchema();
-  const sql = getSql();
-
-  const rows = (await sql`
-    SELECT
-      title,
-      source_url,
-      event_date::text AS event_date,
-      platform,
-      heat
-    FROM launch_events
-    WHERE event_date >= (CURRENT_DATE - INTERVAL '14 days')
-      AND event_date <= (CURRENT_DATE + INTERVAL '365 days')
-    ORDER BY event_date ASC, heat DESC
-  `) as DbLaunchEventRow[];
-
-  return rows.map((row) => ({
-    title: row.title,
-    url: row.source_url,
-    date: row.event_date,
-    platform: row.platform,
-    heat: row.heat,
-  }));
-}
-
 export async function syncGamesToDb(): Promise<SyncResult> {
   await ensureSchema();
   const sql = getSql();
@@ -382,12 +330,11 @@ export async function syncGamesToDb(): Promise<SyncResult> {
   const started = Date.now();
 
   try {
-    const [games, movies, onlineMovieResult, globalOnlineMovieResult, launchEvents] = await Promise.all([
+    const [games, movies, onlineMovieResult, globalOnlineMovieResult] = await Promise.all([
       fetchHotUpcomingGames(),
       fetchUpcomingMovies(),
       fetchOnlineMovies().catch(() => [] as OnlineMovieItem[]),
       fetchGlobalOnlineMovies().catch(() => [] as GlobalOnlineMovieItem[]),
-      Promise.resolve(fetchLaunchEvents()),
     ]);
 
     await sql`BEGIN`;
@@ -408,10 +355,6 @@ export async function syncGamesToDb(): Promise<SyncResult> {
       await sql`
         DELETE FROM global_online_movies
         WHERE online_date < (CURRENT_DATE - INTERVAL '14 days')
-      `;
-      await sql`
-        DELETE FROM launch_events
-        WHERE event_date < (CURRENT_DATE - INTERVAL '14 days')
       `;
 
       const onlineMovieUrls = onlineMovieResult.map((movie) => movie.url).filter(Boolean);
@@ -436,19 +379,6 @@ export async function syncGamesToDb(): Promise<SyncResult> {
           DELETE FROM online_movies
           WHERE title = ${movie.title}
             AND source_url <> ${movie.url}
-        `;
-      }
-
-      for (const event of launchEvents) {
-        await sql`
-          INSERT INTO launch_events (source_url, title, event_date, platform, heat, updated_at)
-          VALUES (${event.url}, ${event.title}, ${event.date}, ${event.platform}, ${event.heat}, NOW())
-          ON CONFLICT (source_url) DO UPDATE SET
-            title = EXCLUDED.title,
-            event_date = EXCLUDED.event_date,
-            platform = EXCLUDED.platform,
-            heat = EXCLUDED.heat,
-            updated_at = NOW()
         `;
       }
 
@@ -613,7 +543,7 @@ export async function syncGamesToDb(): Promise<SyncResult> {
       const durationMs = Date.now() - started;
       await sql`
         INSERT INTO sync_logs (status, synced_count, duration_ms)
-        VALUES ('ok', ${games.length + movies.length + onlineMovieResult.length + globalOnlineMovieResult.length + launchEvents.length}, ${durationMs})
+        VALUES ('ok', ${games.length + movies.length + onlineMovieResult.length + globalOnlineMovieResult.length}, ${durationMs})
       `;
 
       await sql`COMMIT`;
@@ -622,7 +552,6 @@ export async function syncGamesToDb(): Promise<SyncResult> {
         movieSyncedCount: movies.length,
         onlineMovieSyncedCount: onlineMovieResult.length,
         globalOnlineMovieSyncedCount: globalOnlineMovieResult.length,
-        launchEventSyncedCount: launchEvents.length,
         durationMs,
       };
     } catch (error) {

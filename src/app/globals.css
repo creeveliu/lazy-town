@@ -281,10 +281,6 @@ body {
   min-width: 880px;
 }
 
-.launch-table {
-  min-width: 560px;
-}
-
 .game-table th,
 .game-table td {
   padding: 10px 12px;
@@ -423,11 +419,6 @@ tr.year-divider-row:hover {
   .game-table thead th:nth-child(1),
   .game-table tbody tr:not(.year-divider-row) td:nth-child(1) {
     display: none;
-  }
-
-  .launch-table thead th:nth-child(1),
-  .launch-table tbody tr:not(.year-divider-row) td:nth-child(1) {
-    display: table-cell;
   }
 
   .game-table th,
