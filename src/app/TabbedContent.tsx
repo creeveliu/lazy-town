@@ -502,7 +502,7 @@ export default function TabbedContent({
                   </svg>
                 </span>
                 <span className="modal-link-text">
-                  <span className="modal-link-title">游戏发售表</span>
+                  <span className="modal-link-title">游戏</span>
                   <span className="modal-link-hint">PC / PS5 / Switch</span>
                 </span>
               </a>
@@ -528,7 +528,7 @@ export default function TabbedContent({
                   </svg>
                 </span>
                 <span className="modal-link-text">
-                  <span className="modal-link-title">电影上映表</span>
+                  <span className="modal-link-title">院线电影</span>
                   <span className="modal-link-hint">近期热门电影</span>
                 </span>
               </a>
@@ -552,7 +552,7 @@ export default function TabbedContent({
                   </svg>
                 </span>
                 <span className="modal-link-text">
-                  <span className="modal-link-title">在线电影上线表</span>
+                  <span className="modal-link-title">在线电影 · 国内</span>
                   <span className="modal-link-hint">爱奇艺 / 腾讯视频 / 优酷</span>
                 </span>
               </a>
@@ -574,7 +574,7 @@ export default function TabbedContent({
                   </svg>
                 </span>
                 <span className="modal-link-text">
-                  <span className="modal-link-title">海外流媒体上线表</span>
+                  <span className="modal-link-title">在线电影 · 海外</span>
                   <span className="modal-link-hint">Netflix / Apple TV / Prime Video</span>
                 </span>
               </a>
@@ -599,8 +599,8 @@ export default function TabbedContent({
                   </svg>
                 </span>
                 <span className="modal-link-text">
-                  <span className="modal-link-title">发布会日历</span>
-                  <span className="modal-link-hint">Apple / NVIDIA / Nintendo</span>
+                  <span className="modal-link-title">发布会</span>
+                  <span className="modal-link-hint">游戏 / 数码 / 开发者大会</span>
                 </span>
               </a>
             </div>
