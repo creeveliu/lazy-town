@@ -20,11 +20,13 @@ const YOUKU_MOVIE_URL = "https://www.youku.com/ku/webmovie";
 const IQIYI_NEW_ONLINE_URL =
   "https://www.iqiyi.com/newOnlinePCW?deviceId=9abd3d88d08f1d65da7036e973c139bd&v=12.112.20682";
 const TENCENT_MOVIE_URL = "https://v.qq.com/channel/movie";
+const BILIBILI_UPCOMING_MOVIE_API = "https://api.bilibili.com/pgc/web/timeline/online?type=1";
 const TENCENT_PAGE_ID = "100173";
 const RESERVATION_THRESHOLD = 5000;
 const YOUKU_TBA_RESERVATION_THRESHOLD = 50000;
 const IQIYI_TBA_RESERVATION_THRESHOLD = 50000;
 const TENCENT_TBA_RESERVATION_THRESHOLD = 200000;
+const BILIBILI_TBA_RESERVATION_THRESHOLD = 50000;
 const REQUEST_TIMEOUT_MS = 15000;
 
 function normalizeText(value: string): string {
@@ -67,6 +69,15 @@ function parseOnlineDate(raw: string): string | null {
   if (chineseYmd) {
     const [, y, m, d] = chineseYmd;
     return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+
+  const monthDayDash = value.match(/(\d{1,2})-(\d{1,2})(?:\s+\d{1,2}:\d{2})?/);
+  if (monthDayDash) {
+    const [, m, d] = monthDayDash;
+    const target = new Date(now.getFullYear(), Number.parseInt(m, 10) - 1, Number.parseInt(d, 10));
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (target < today) target.setFullYear(target.getFullYear() + 1);
+    return formatDate(target);
   }
 
   const monthDay = value.match(/(\d{1,2})月(\d{1,2})日/);
@@ -139,6 +150,29 @@ async function fetchJson<T>(url: string, body: unknown, referer: string): Promis
         Referer: referer,
       },
       body: JSON.stringify(body),
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) return null;
+    return response.json() as Promise<T>;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchGetJson<T>(url: string, referer: string): Promise<T | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": USER_AGENT,
+        Referer: referer,
+      },
       cache: "no-store",
       signal: controller.signal,
     });
@@ -393,11 +427,61 @@ async function fetchTencentOnlineMovies(): Promise<DraftOnlineMovie[]> {
   return rows;
 }
 
+type BilibiliTimelineItem = {
+  title?: string;
+  link?: string;
+  desc?: string;
+  cover?: string;
+  season_type?: number;
+  stat?: {
+    follower?: number;
+  };
+};
+
+type BilibiliTimelineResponse = {
+  code?: number;
+  result?: {
+    items?: BilibiliTimelineItem[];
+  };
+};
+
+async function fetchBilibiliOnlineMovies(): Promise<DraftOnlineMovie[]> {
+  const data = await fetchGetJson<BilibiliTimelineResponse>(
+    BILIBILI_UPCOMING_MOVIE_API,
+    "https://m.bilibili.com/bangumi/upcoming/movie",
+  );
+  if (data?.code !== 0) return [];
+
+  const rows: DraftOnlineMovie[] = [];
+  for (const item of data.result?.items ?? []) {
+    const title = normalizeText(item.title ?? "");
+    const onlineDate = parseOnlineDate(item.desc ?? "");
+    const reservationCount = item.stat?.follower ?? 0;
+    const minReservationCount = onlineDate ? RESERVATION_THRESHOLD : BILIBILI_TBA_RESERVATION_THRESHOLD;
+
+    if (!title || item.season_type !== 2 || reservationCount < minReservationCount) continue;
+
+    rows.push({
+      title,
+      url: normalizeUrl(item.link ?? "", "https://www.bilibili.com"),
+      onlineDate,
+      platforms: ["哔哩哔哩"],
+      sourceName: "哔哩哔哩电影",
+      status: onlineDate ? "上线" : "敬请期待",
+      reservationCount,
+      confidence: onlineDate ? 85 : 70,
+      coverUrl: normalizeUrl(item.cover ?? "", "https://www.bilibili.com"),
+    });
+  }
+
+  return rows;
+}
+
 function mergeRows(rows: DraftOnlineMovie[]): OnlineMovieItem[] {
   const merged = new Map<string, DraftOnlineMovie>();
 
   for (const row of rows) {
-    const key = `${row.title}-${row.onlineDate ?? "TBA"}`;
+    const key = normalizeText(row.title).toLowerCase();
     const existing = merged.get(key);
     if (!existing) {
       merged.set(key, { ...row, platforms: [...row.platforms] });
@@ -406,6 +490,11 @@ function mergeRows(rows: DraftOnlineMovie[]): OnlineMovieItem[] {
 
     for (const platform of row.platforms) {
       if (!existing.platforms.includes(platform)) existing.platforms.push(platform);
+    }
+
+    if (row.onlineDate && (!existing.onlineDate || row.onlineDate < existing.onlineDate)) {
+      existing.onlineDate = row.onlineDate;
+      existing.status = row.status;
     }
 
     if (row.reservationCount > existing.reservationCount) existing.reservationCount = row.reservationCount;
@@ -430,6 +519,7 @@ export async function fetchOnlineMovies(): Promise<OnlineMovieItem[]> {
     fetchYoukuOnlineMovies(),
     fetchIqiyiOnlineMovies(),
     fetchTencentOnlineMovies(),
+    fetchBilibiliOnlineMovies(),
   ]);
 
   return mergeRows(results.flatMap((result) => (result.status === "fulfilled" ? result.value : [])));

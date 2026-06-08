@@ -378,7 +378,6 @@ export async function syncGamesToDb(): Promise<SyncResult> {
         await sql`
           DELETE FROM online_movies
           WHERE title = ${movie.title}
-            AND online_date IS NOT DISTINCT FROM ${movie.onlineDate}
             AND source_url <> ${movie.url}
         `;
       }
@@ -500,24 +499,28 @@ export async function syncGamesToDb(): Promise<SyncResult> {
         WITH duplicate_groups AS (
           SELECT
             title,
-            online_date,
             (ARRAY_AGG(id ORDER BY reservation_count DESC, updated_at DESC, id DESC))[1] AS keep_id,
-            ARRAY_AGG(id) AS ids
+            ARRAY_AGG(id) AS ids,
+            MIN(online_date) AS online_date
           FROM online_movies
-          GROUP BY title, online_date
+          GROUP BY title
           HAVING COUNT(*) > 1
         ),
         merged_platforms AS (
           SELECT
             duplicate_groups.keep_id,
-            ARRAY_AGG(DISTINCT platform ORDER BY platform) AS platforms
+            ARRAY_AGG(DISTINCT platform ORDER BY platform) AS platforms,
+            duplicate_groups.online_date
           FROM duplicate_groups
           JOIN online_movies ON online_movies.id = ANY(duplicate_groups.ids)
           CROSS JOIN LATERAL UNNEST(online_movies.platforms) AS platform
-          GROUP BY duplicate_groups.keep_id
+          GROUP BY duplicate_groups.keep_id, duplicate_groups.online_date
         )
         UPDATE online_movies
-        SET platforms = merged_platforms.platforms
+        SET
+          platforms = merged_platforms.platforms,
+          online_date = merged_platforms.online_date,
+          status = CASE WHEN merged_platforms.online_date IS NULL THEN online_movies.status ELSE '上线' END
         FROM merged_platforms
         WHERE online_movies.id = merged_platforms.keep_id
       `;
@@ -528,7 +531,7 @@ export async function syncGamesToDb(): Promise<SyncResult> {
             (ARRAY_AGG(id ORDER BY reservation_count DESC, updated_at DESC, id DESC))[1] AS keep_id,
             ARRAY_AGG(id) AS ids
           FROM online_movies
-          GROUP BY title, online_date
+          GROUP BY title
           HAVING COUNT(*) > 1
         )
         DELETE FROM online_movies
