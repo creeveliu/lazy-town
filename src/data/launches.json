@@ -1,0 +1,72 @@
+[
+  {
+    "title": "英伟达 GTC 台北 2026 主题演讲",
+    "date": "2026-06-01",
+    "platform": "NVIDIA",
+    "url": "https://www.nvidia.cn/gtc/taipei/keynote/",
+    "heat": 25000
+  },
+  {
+    "title": "PlayStation State of Play",
+    "date": "2026-06-02",
+    "platform": "PlayStation",
+    "url": "https://blog.playstation.com/2026/05/20/state-of-play-returns-tuesday-june-2/",
+    "heat": 23000
+  },
+  {
+    "title": "Intel Computex 2026 主题演讲",
+    "date": "2026-06-02",
+    "platform": "Intel",
+    "url": "https://newsroom.intel.com/client-computing/intel-at-computex-2026-the-next-era-of-ai-driven-computing",
+    "heat": 18000
+  },
+  {
+    "title": "夏日游戏节 2026",
+    "date": "2026-06-05",
+    "platform": "Summer Game Fest",
+    "url": "https://www.gamesradar.com/summer-game-fest-schedule-2026/",
+    "heat": 26000
+  },
+  {
+    "title": "未来游戏展夏季发布会 2026",
+    "date": "2026-06-06",
+    "platform": "Future",
+    "url": "https://www.gamesradar.com/future-games-show/",
+    "heat": 17000
+  },
+  {
+    "title": "Xbox 游戏发布会 2026",
+    "date": "2026-06-07",
+    "platform": "Xbox",
+    "url": "https://news.xbox.com/en-us/2026/06/01/xbox-games-showcase-2026-gears-of-war-e-day-direct-how-to-watch/",
+    "heat": 25000
+  },
+  {
+    "title": "Apple WWDC26 主题演讲",
+    "date": "2026-06-08",
+    "platform": "Apple",
+    "url": "https://www.apple.com/newsroom/2026/05/apple-kicks-off-worldwide-developers-conference-on-june-8/",
+    "heat": 25000
+  },
+  {
+    "title": "PC 游戏展 2026",
+    "date": "2026-06-08",
+    "platform": "PC Gamer",
+    "url": "https://www.gamesradar.com/summer-game-fest-schedule-2026/",
+    "heat": 15000
+  },
+  {
+    "title": "任天堂直面会 2026",
+    "date": "2026-06-09",
+    "platform": "Nintendo",
+    "url": "https://www.nintendo.com/us/nintendo-direct/",
+    "heat": 22000
+  },
+  {
+    "title": "AMD Advancing AI 2026",
+    "date": "2026-07-23",
+    "platform": "AMD",
+    "url": "https://www.amd.com/en/newsroom/press-releases/2026-4-28-amd-announces-advancing-ai-2026-.html",
+    "heat": 18000
+  }
+]
