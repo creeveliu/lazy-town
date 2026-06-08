@@ -8,37 +8,22 @@ const ALLOWED_HOSTS = new Set([
   "imgs.gamersky.com",
   "image.gamersky.com",
   "www.gamersky.com",
-  "img1.doubanio.com",
-  "img2.doubanio.com",
-  "img3.doubanio.com",
-  "img9.doubanio.com",
   "img.wmdb.tv",
   "image.tmdb.org",
-  "liangcang-material.alicdn.com",
-  "m.ykimg.com",
-  "pic0.iqiyipic.com",
-  "pic1.iqiyipic.com",
-  "pic2.iqiyipic.com",
-  "pic3.iqiyipic.com",
-  "pic4.iqiyipic.com",
-  "pic5.iqiyipic.com",
-  "pic6.iqiyipic.com",
-  "pic7.iqiyipic.com",
-  "pic8.iqiyipic.com",
-  "pic9.iqiyipic.com",
-  "puui.qpic.cn",
-  "tv.puui.qpic.cn",
-  "vmmp.qpic.cn",
-  "vcover-hz-pic.puui.qpic.cn",
-  "gif.media.qpic.cn",
   "images.justwatch.com",
-  "i0.hdslb.com",
-  "i1.hdslb.com",
-  "i2.hdslb.com",
 ]);
 
+const ALLOWED_HOST_SUFFIXES = [
+  ".doubanio.com",
+  ".alicdn.com",
+  ".ykimg.com",
+  ".iqiyipic.com",
+  ".qpic.cn",
+  ".hdslb.com",
+];
+
 function isAllowed(url: URL): boolean {
-  return ALLOWED_HOSTS.has(url.hostname);
+  return ALLOWED_HOSTS.has(url.hostname) || ALLOWED_HOST_SUFFIXES.some((suffix) => url.hostname.endsWith(suffix));
 }
 
 function buildReferer(target: URL, rawRef: string): string {
