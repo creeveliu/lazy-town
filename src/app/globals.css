@@ -313,11 +313,6 @@ body {
   background: #f4f6fb;
 }
 
-.online-cover {
-  width: 72px;
-  height: 54px;
-}
-
 .global-cover {
   object-fit: cover;
   background: #eef0f5;

@@ -154,8 +154,8 @@ export default function TabbedContent({ games, movies, onlineMovies, globalOnlin
               className="cover online-cover"
               src={proxiedImageUrl(movie.coverUrl, movie.url)}
               alt={movie.title}
-              width={72}
-              height={54}
+              width={54}
+              height={76}
               loading="lazy"
             />
           ) : (
