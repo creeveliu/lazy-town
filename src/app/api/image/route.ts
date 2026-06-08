@@ -16,6 +16,7 @@ const ALLOWED_HOSTS = new Set([
   "image.tmdb.org",
   "liangcang-material.alicdn.com",
   "m.ykimg.com",
+  "pic0.iqiyipic.com",
   "pic1.iqiyipic.com",
   "pic2.iqiyipic.com",
   "pic3.iqiyipic.com",
